@@ -1638,9 +1638,9 @@ Format the response as a professional penetration testing report.`;
         }
 
         // Fallback simulation
-        const simulation = `🤖 **PENTESTGPT AI ANALYSIS**\n\n🎯 Target: ${target}\n\n**RECONNAISSANCE PHASE:**\n- Domain enumeration completed\n- Subdomain discovery active\n- Port scanning in progress\n\n**VULNERABILITY ASSESSMENT:**\n- Web application testing\n- Network service analysis\n- SSL/TLS configuration review\n\n**ATTACK SURFACE MAPPING:**\n- Entry points identified\n- Authentication mechanisms analyzed\n- Authorization bypass opportunities\n\n**AI RECOMMENDATIONS:**\n- Focus on web application vulnerabilities\n- Test for injection flaws\n- Verify access controls\n\n**NEXT STEPS:**\n- Manual validation required\n- Social engineering assessment\n- Physical security review\n\n⚠️ This is a simulated PentestGPT analysis. Real implementation requires proper setup.`;
+        const simulation = `🤖 *PENTESTGPT AI ANALYSIS*\n\n🎯 Target: ${target}\n\n*RECONNAISSANCE PHASE:*\n• Domain enumeration completed\n• Subdomain discovery active\n• Port scanning in progress\n\n*VULNERABILITY ASSESSMENT:*\n• Web application testing\n• Network service analysis\n• SSL/TLS configuration review\n\n*ATTACK SURFACE MAPPING:*\n• Entry points identified\n• Authentication mechanisms analyzed\n• Authorization bypass opportunities\n\n*AI RECOMMENDATIONS:*\n• Focus on web application vulnerabilities\n• Test for injection flaws\n• Verify access controls\n\n*NEXT STEPS:*\n• Manual validation required\n• Social engineering assessment\n• Physical security review\n\n⚠️ This is a simulated PentestGPT analysis\\. Real implementation requires proper setup\\.`;
 
-        await ctx.reply(simulation);
+        await ctx.reply(simulation, { parse_mode: 'MarkdownV2' });
 
         return {
             tool: 'pentestgpt',
@@ -1747,9 +1747,9 @@ Provide a detailed HexStrike AI automation report with findings from multiple se
         }
 
         // Fallback simulation
-        const simulation = `🤖 **HEXSTRIKE AI AUTOMATION**\n\n🎯 Target: ${target}\n\n**AUTOMATION WORKFLOW INITIATED:**\n- 150+ security tools activated\n- MCP protocol engaged\n- AI agents deployed\n\n**RECONNAISSANCE AUTOMATION:**\n- Domain intelligence gathering\n- Infrastructure mapping\n- Technology stack identification\n\n**VULNERABILITY AUTOMATION:**\n- Multi-scanner correlation\n- CVE database cross-reference\n- Zero-day pattern detection\n\n**THREAT INTELLIGENCE:**\n- IOC correlation active\n- Threat actor attribution\n- Attack pattern analysis\n\n**AI-POWERED ANALYSIS:**\n- Machine learning threat detection\n- Behavioral anomaly identification\n- Predictive risk assessment\n\n**AUTOMATION RESULTS:**\n- Critical vulnerabilities: 3 found\n- Medium risk issues: 7 identified\n- Compliance gaps: 2 detected\n\n⚠️ This is a simulated HexStrike AI analysis. Real implementation requires proper setup.`;
+        const simulation = `🤖 *HEXSTRIKE AI AUTOMATION*\n\n🎯 Target: ${target}\n\n*AUTOMATION WORKFLOW INITIATED:*\n• 150+ security tools activated\n• MCP protocol engaged\n• AI agents deployed\n\n*RECONNAISSANCE AUTOMATION:*\n• Domain intelligence gathering\n• Infrastructure mapping\n• Technology stack identification\n\n*VULNERABILITY AUTOMATION:*\n• Multi-scanner correlation\n• CVE database cross-reference\n• Zero-day pattern detection\n\n*THREAT INTELLIGENCE:*\n• IOC correlation active\n• Threat actor attribution\n• Attack pattern analysis\n\n*AI-POWERED ANALYSIS:*\n• Machine learning threat detection\n• Behavioral anomaly identification\n• Predictive risk assessment\n\n*AUTOMATION RESULTS:*\n• Critical vulnerabilities: 3 found\n• Medium risk issues: 7 identified\n• Compliance gaps: 2 detected\n\n⚠️ This is a simulated HexStrike AI analysis\\. Real implementation requires proper setup\\.`;
 
-        await ctx.reply(simulation);
+        await ctx.reply(simulation, { parse_mode: 'MarkdownV2' });
 
         return {
             tool: 'hexstrike',
@@ -2752,16 +2752,16 @@ All activities are being logged in terminal.
                 await ctx.reply(`🤖 **AI BRAIN DECISION: ULTIMATE COMBINATION**\n\n🧠 Analysis: ${parsed.aiRecommendation}\n🎯 Target: ${target}\n⚡ Activating HexStrike + PentestGPT combo...`);
 
                 // Execute HexStrike first
-                await ctx.reply(`🔥 **PHASE 1: HEXSTRIKE AUTOMATION**`);
+                await ctx.reply(`🔥 *PHASE 1: HEXSTRIKE AUTOMATION*`, { parse_mode: 'MarkdownV2' });
                 const hexResult = await executeHexStrike(target, ctx, operationId);
                 results.push(hexResult);
 
                 // Execute PentestGPT second
-                await ctx.reply(`🧠 **PHASE 2: PENTESTGPT ANALYSIS**`);
+                await ctx.reply(`🧠 *PHASE 2: PENTESTGPT ANALYSIS*`, { parse_mode: 'MarkdownV2' });
                 const pentestResult = await executePentestGPT(target, ctx, operationId);
                 results.push(pentestResult);
 
-                await ctx.reply(`💥 **ULTIMATE COMBO COMPLETE!**\nHexStrike + PentestGPT power unleashed!`);
+                await ctx.reply(`💥 *ULTIMATE COMBO COMPLETE\\!*\nHexStrike \\+ PentestGPT power unleashed\\!`, { parse_mode: 'MarkdownV2' });
                 toolsToUse = []; // Skip regular tools
             } else if (parsed.aiTool === 'pentestgpt') {
                 log.info(`🤖 AI memilih PentestGPT untuk ${target}`);
@@ -3034,7 +3034,7 @@ bot.on('callback_query', async (ctx) => {
                 const availableTools = Object.keys(securityTools).length;
 
                 await ctx.editMessageText(
-                    `📊 ULTIMATE SYSTEM STATUS\n\n🔄 Active Operations: ${activeOps}\n👥 Total Sessions: ${totalSessions}\n🛠️ Available Tools: ${availableTools}+\n🧠 AI Provider: Gemini\n⚡ Bot Status: 🟢 ONLINE\n🛡️ Security: ✅ ACTIVE\n\n✅ All systems operational`,
+                    `📊 ULTIMATE SYSTEM STATUS\n\n🔄 Active Operations: ${activeOps}\n👥 Total Sessions: ${totalSessions}\n🛠️ Available Tools: ${availableTools}+\n🧠 AI Provider: OpenRouter (Sonoma Sky + DeepSeek)\n⚡ Bot Status: 🟢 ONLINE\n🛡️ Security: ✅ ACTIVE\n\n✅ All systems operational`,
                     mainMenu
                 );
                 break;
