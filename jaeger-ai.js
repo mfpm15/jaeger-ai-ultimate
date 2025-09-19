@@ -201,8 +201,8 @@ const securityTools = {
         name: 'Gobuster', category: 'Web Security',
         description: 'Directory/file & DNS busting',
         commands: {
-            basic: 'gobuster dir -u https://{target} -w /usr/share/wordlists/dirb/common.txt -t 20 -q -x php,html,txt --no-error --wildcard',
-            dir: 'gobuster dir -u https://{target} -w /usr/share/wordlists/dirb/common.txt -t 20 -q -x php,html,txt --no-error --wildcard',
+            basic: 'gobuster dir -u https://{target} -w /usr/share/wordlists/dirb/common.txt -t 20 -q -x php,html,txt --no-error',
+            dir: 'gobuster dir -u https://{target} -w /usr/share/wordlists/dirb/common.txt -t 20 -q -x php,html,txt --no-error',
             dns: 'gobuster dns -d {target} -w /usr/share/wordlists/dnsmap.txt -t 20 -q',
             vhost: 'gobuster vhost -u https://{target} -w /usr/share/wordlists/subdomains.txt -t 20 -q'
         }
@@ -1704,7 +1704,34 @@ Provide a detailed HexStrike AI automation report with findings from multiple se
                     const data = await response.json();
                     const analysis = data.choices[0].message.content;
 
-                    await ctx.reply(`🤖 **HEXSTRIKE AI AUTOMATION COMPLETE**\n\n${analysis}`);
+                    // Split long messages to avoid Telegram limits (4096 chars)
+                    const prefix = `🤖 **HEXSTRIKE AI AUTOMATION COMPLETE**\n\n`;
+                    const maxLength = 4000; // Leave some space for prefix
+
+                    if ((prefix + analysis).length <= 4096) {
+                        await ctx.reply(`${prefix}${analysis}`);
+                    } else {
+                        // Send in chunks
+                        await ctx.reply(prefix);
+
+                        const chunks = [];
+                        let currentChunk = '';
+                        const lines = analysis.split('\n');
+
+                        for (const line of lines) {
+                            if ((currentChunk + line + '\n').length > maxLength) {
+                                if (currentChunk) chunks.push(currentChunk.trim());
+                                currentChunk = line + '\n';
+                            } else {
+                                currentChunk += line + '\n';
+                            }
+                        }
+                        if (currentChunk) chunks.push(currentChunk.trim());
+
+                        for (let i = 0; i < chunks.length; i++) {
+                            await ctx.reply(`📋 **Part ${i + 1}/${chunks.length}**\n\n${chunks[i]}`);
+                        }
+                    }
 
                     return {
                         tool: 'hexstrike',
@@ -2006,11 +2033,13 @@ Berdasarkan input tersebut, tentukan:
    - web: Web application testing
    - network: Network testing
 
-2. RECOMMENDED APPROACH (pilih salah satu):
-   - pentestgpt: Jika user ingin penetration testing yang mendalam dengan AI guidance
-   - hexstrike: Jika user ingin automated security testing dengan banyak tools
-   - traditional: Jika user ingin traditional security tools
-   - single: Jika user menyebutkan tool spesifik
+2. RECOMMENDED APPROACH (pilih salah satu berdasarkan analisis otomatis):
+   - pentestgpt: Untuk penetration testing mendalam, vulnerability analysis, atau security audit
+   - hexstrike: Untuk comprehensive scanning, automated testing, security analysis, atau multi-tool approach
+   - traditional: Hanya jika user secara eksplisit menyebutkan tool tradisional tertentu
+   - single: Hanya jika user menyebutkan 1 tool spesifik dengan jelas
+
+PRIORITAS: Selalu pilih pentestgpt atau hexstrike untuk keamanan maksimal, kecuali user eksplisit minta tool tertentu
 
 3. TOOLS: Jika traditional, rekomendasikan maksimal 5 tools terbaik untuk target tersebut
 
