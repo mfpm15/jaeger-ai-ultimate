@@ -2033,13 +2033,12 @@ Berdasarkan input tersebut, tentukan:
    - web: Web application testing
    - network: Network testing
 
-2. RECOMMENDED APPROACH (pilih salah satu berdasarkan analisis otomatis):
-   - pentestgpt: Untuk penetration testing mendalam, vulnerability analysis, atau security audit
-   - hexstrike: Untuk comprehensive scanning, automated testing, security analysis, atau multi-tool approach
+2. RECOMMENDED APPROACH (kombinasi untuk maximum power):
+   - combined: SELALU gunakan kombinasi HexStrike + PentestGPT untuk power maksimal
    - traditional: Hanya jika user secara eksplisit menyebutkan tool tradisional tertentu
    - single: Hanya jika user menyebutkan 1 tool spesifik dengan jelas
 
-PRIORITAS: Selalu pilih pentestgpt atau hexstrike untuk keamanan maksimal, kecuali user eksplisit minta tool tertentu
+PRIORITAS: SELALU pilih "combined" untuk kombinasi HexStrike + PentestGPT yang paling powerful
 
 3. TOOLS: Jika traditional, rekomendasikan maksimal 5 tools terbaik untuk target tersebut
 
@@ -2049,7 +2048,7 @@ Respon dalam format JSON:
 {
   "intent": "...",
   "useAI": true/false,
-  "aiTool": "pentestgpt/hexstrike/none",
+  "aiTool": "combined/pentestgpt/hexstrike/none",
   "recommendedTools": ["tool1", "tool2", "tool3", "tool4", "tool5"],
   "useSingleTool": true/false,
   "useFullScan": true/false,
@@ -2748,7 +2747,23 @@ All activities are being logged in terminal.
 
         if (parsed.useAI && parsed.aiTool !== 'none') {
             // AI tools execution
-            if (parsed.aiTool === 'pentestgpt') {
+            if (parsed.aiTool === 'combined') {
+                log.info(`🤖 AI memilih COMBINED (HexStrike + PentestGPT) untuk ${target}`);
+                await ctx.reply(`🤖 **AI BRAIN DECISION: ULTIMATE COMBINATION**\n\n🧠 Analysis: ${parsed.aiRecommendation}\n🎯 Target: ${target}\n⚡ Activating HexStrike + PentestGPT combo...`);
+
+                // Execute HexStrike first
+                await ctx.reply(`🔥 **PHASE 1: HEXSTRIKE AUTOMATION**`);
+                const hexResult = await executeHexStrike(target, ctx, operationId);
+                results.push(hexResult);
+
+                // Execute PentestGPT second
+                await ctx.reply(`🧠 **PHASE 2: PENTESTGPT ANALYSIS**`);
+                const pentestResult = await executePentestGPT(target, ctx, operationId);
+                results.push(pentestResult);
+
+                await ctx.reply(`💥 **ULTIMATE COMBO COMPLETE!**\nHexStrike + PentestGPT power unleashed!`);
+                toolsToUse = []; // Skip regular tools
+            } else if (parsed.aiTool === 'pentestgpt') {
                 log.info(`🤖 AI memilih PentestGPT untuk ${target}`);
                 await ctx.reply(`🤖 **AI BRAIN DECISION: PENTESTGPT**\n\n🧠 Analysis: ${parsed.aiRecommendation}\n🎯 Target: ${target}\n⚡ Executing AI-powered penetration testing...`);
                 const aiResult = await executePentestGPT(target, ctx, operationId);
