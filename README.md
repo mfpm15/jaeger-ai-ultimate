@@ -26,8 +26,7 @@ Jaeger AI Ultimate is a powerful Telegram bot that integrates **129 cybersecurit
 
 - Node.js 18.0.0+
 - Telegram Bot Token ([Get from @BotFather](https://t.me/BotFather))
-- Google Gemini API Key ([Get here](https://makersuite.google.com/app/apikey))
-- OpenRouter API Keys ([Get here](https://openrouter.ai/keys))
+- OpenRouter API Keys for Sonoma Sky & DeepSeek ([Get here](https://openrouter.ai/keys))
 
 ### Installation
 
@@ -191,7 +190,7 @@ jaeger-ai-ultimate/
 ### **Technology Stack**
 - **Framework**: Telegraf.js
 - **Runtime**: Node.js 18+
-- **AI Providers**: OpenRouter, Google Gemini
+- **AI Providers**: OpenRouter (Sonoma Sky, DeepSeek)
 - **Database**: JSON-based user management
 - **Security Tools**: 129 integrated tools
 

@@ -2512,7 +2512,7 @@ Date: ${new Date(user.suspendDate).toLocaleDateString()}
 🛡️ Vulnerability Assessment: nessus, openvas
 
 🧠 AI-Powered Analysis:
-• Multi-provider AI integration (OpenRouter, Gemini)
+• Multi-provider AI integration (Sonoma Sky, DeepSeek via OpenRouter)
 • Smart tool selection with up to 5 recommended tools
 • Advanced threat intelligence and context analysis
 • Comprehensive risk assessment with actionable insights
