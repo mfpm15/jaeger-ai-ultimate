@@ -1324,8 +1324,8 @@ async function tryOpenRouterWithFailover(results, target, operation, apiKey, key
 ${results.map(r => `Tool: ${r.tool}
 Command: ${r.command}
 Success: ${r.success}
-Output: ${r.stdout?.substring(0, 1000) || 'No output'}
-${r.stderr ? 'Errors: ' + r.stderr.substring(0, 500) : ''}
+Output: ${r.stdout?.substring(0, 2000) || 'No output'}
+${r.stderr ? 'Errors: ' + r.stderr.substring(0, 1000) : ''}
 ---`).join('\n')}
 
 Provide a comprehensive security analysis including:
@@ -1358,7 +1358,7 @@ Focus on actionable insights and practical recommendations.`;
                     content: prompt
                 }
             ],
-            max_tokens: 2000,
+            max_tokens: 4000,
             temperature: 0.3
         })
     });
@@ -1381,8 +1381,8 @@ async function tryOpenRouterWithKey(results, target, operation, apiKey, keyName,
 ${results.map(r => `Tool: ${r.tool}
 Command: ${r.command}
 Success: ${r.success}
-Output: ${r.stdout?.substring(0, 1000) || 'No output'}
-${r.stderr ? 'Errors: ' + r.stderr.substring(0, 500) : ''}
+Output: ${r.stdout?.substring(0, 2000) || 'No output'}
+${r.stderr ? 'Errors: ' + r.stderr.substring(0, 1000) : ''}
 ---`).join('\n')}
 
 Provide a comprehensive security analysis including:
@@ -1415,7 +1415,7 @@ Focus on actionable insights and practical recommendations.`;
                         content: prompt
                     }
                 ],
-                max_tokens: 2000,
+                max_tokens: 4000,
                 temperature: 0.3
             })
         });
@@ -1464,8 +1464,8 @@ async function tryBackupOpenRouter(results, target, operation, backupKey) {
 ${results.map(r => `Tool: ${r.tool}
 Command: ${r.command}
 Success: ${r.success}
-Output: ${r.stdout?.substring(0, 1000) || 'No output'}
-${r.stderr ? 'Errors: ' + r.stderr.substring(0, 500) : ''}
+Output: ${r.stdout?.substring(0, 2000) || 'No output'}
+${r.stderr ? 'Errors: ' + r.stderr.substring(0, 1000) : ''}
 ---`).join('\n')}
 
 Provide a comprehensive security analysis including:
@@ -1498,7 +1498,7 @@ Focus on actionable insights and practical recommendations.`;
                         content: prompt
                     }
                 ],
-                max_tokens: 2000,
+                max_tokens: 4000,
                 temperature: 0.3
             })
         });
@@ -1613,7 +1613,7 @@ Format the response as a professional penetration testing report.`;
                             { role: 'system', content: 'You are PentestGPT, an expert AI penetration testing assistant.' },
                             { role: 'user', content: prompt }
                         ],
-                        max_tokens: 2000,
+                        max_tokens: 4000,
                         temperature: 0.3
                     })
                 });
@@ -1695,7 +1695,7 @@ Provide a detailed HexStrike AI automation report with findings from multiple se
                             { role: 'system', content: 'You are HexStrike AI, an advanced cybersecurity automation platform.' },
                             { role: 'user', content: prompt }
                         ],
-                        max_tokens: 2000,
+                        max_tokens: 4000,
                         temperature: 0.3
                     })
                 });
@@ -2928,30 +2928,34 @@ ${result.stdout.substring(0, 800)}${result.stdout.length > 800 ? '\n... (truncat
         // Send header
         await ctx.reply(reportHeader);
 
-        // Send AI analysis in chunks if it's too long
+        // Send AI analysis in optimized chunks
         if (aiAnalysis && aiAnalysis.length > 0) {
-            const maxLength = 3500;
+            const maxLength = 3800; // Increased for better content
             if (aiAnalysis.length > maxLength) {
                 const chunks = [];
                 let currentChunk = '';
                 const lines = aiAnalysis.split('\n');
 
                 for (const line of lines) {
-                    if ((currentChunk + line + '\n').length > maxLength) {
-                        if (currentChunk) chunks.push(currentChunk);
+                    const testLength = currentChunk + line + '\n';
+                    if (testLength.length > maxLength && currentChunk.length > 0) {
+                        chunks.push(currentChunk.trim());
                         currentChunk = line + '\n';
                     } else {
                         currentChunk += line + '\n';
                     }
                 }
-                if (currentChunk) chunks.push(currentChunk);
+                if (currentChunk.trim()) chunks.push(currentChunk.trim());
+
+                // Send header first
+                await ctx.reply(`🧠 **AI SECURITY ANALYSIS** (${chunks.length} parts):`);
 
                 for (let i = 0; i < chunks.length; i++) {
-                    await ctx.reply(`🧠 AI SECURITY ANALYSIS (Part ${i + 1}/${chunks.length}):\n\n${chunks[i]}`);
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await ctx.reply(`📋 **Part ${i + 1}/${chunks.length}**\n\n${chunks[i]}`);
+                    await new Promise(resolve => setTimeout(resolve, 300)); // Faster delivery
                 }
             } else {
-                await ctx.reply(`🧠 AI SECURITY ANALYSIS:\n\n${aiAnalysis}`);
+                await ctx.reply(`🧠 **AI SECURITY ANALYSIS:**\n\n${aiAnalysis}`);
             }
         }
 
