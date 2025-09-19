@@ -1,0 +1,40 @@
+{
+  "name": "jaeger-ai",
+  "version": "3.0.1",
+  "description": "Ultimate AI-Powered Cybersecurity Platform - 141+ Security Tools with OpenRouter & Gemini AI",
+  "main": "jaeger-ai.js",
+  "scripts": {
+    "start": "node jaeger-ai.js",
+    "dev": "NODE_ENV=development node jaeger-ai.js",
+    "test": "echo \"No tests yet\" && exit 0",
+    "setup": "./start.sh"
+  },
+  "keywords": [
+    "cybersecurity",
+    "penetration-testing",
+    "ai",
+    "telegram-bot",
+    "pentestgpt",
+    "hexstrike",
+    "security-tools",
+    "vulnerability-assessment"
+  ],
+  "author": "Jaeger AI Team",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^17.2.2",
+    "node-fetch": "^2.7.0",
+    "sqlite3": "^5.1.7",
+    "telegraf": "^4.16.3",
+    "validator": "^13.15.15",
+    "xss": "^1.0.15"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jaeger-ai/jaeger-ai"
+  }
+}
