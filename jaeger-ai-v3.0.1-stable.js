@@ -2335,9 +2335,10 @@ Date: ${new Date(user.suspendDate).toLocaleDateString()}
 🛡️ Vulnerability Assessment: nessus, openvas
 
 🧠 AI-Powered Analysis:
-• OpenRouter.ai integration with Claude 3.5 Sonnet
-• Advanced threat intelligence
-• Comprehensive risk assessment
+• Multi-provider AI integration (OpenRouter, Gemini)
+• Smart tool selection and recommendations
+• Advanced threat intelligence and context analysis
+• Comprehensive risk assessment with actionable insights
 
 🎯 Advanced Features:
 • 🔴 Red Team Operations
