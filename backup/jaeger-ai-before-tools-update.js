@@ -85,7 +85,7 @@ function getPrimaryApiKey() {
             key: apiKeyStatus.grok.key,
             type: 'grok',
             name: 'Grok 4 Fast',
-            model: 'x-ai/grok-4-fast:free'
+            model: 'x-ai/grok-2-1212'
         };
     }
 
@@ -145,172 +145,530 @@ function getBackupApiKey(excludeType) {
 
 // 150+ COMPREHENSIVE SECURITY TOOLS DATABASE (INTEGRATED WITH HEXSTRIKE AI)
 const securityTools = {
-    // === NETWORK RECON & SCANNING ===
+    // === NETWORK RECONNAISSANCE ===
     nmap: {
         name: 'Nmap', category: 'Network Recon',
         description: 'Network discovery and security auditing',
         commands: {
             basic: 'nmap -sS --top-ports 100 -T4 {target}',
+            ping_sweep: 'nmap -sn {target}',
+            port_scan: 'nmap --top-ports 1000 -T4 {target}',
             service_scan: 'nmap -sV --top-ports 100 -T4 {target}',
-            vuln_scan: 'nmap --script vuln --top-ports 50 -T4 {target}'
+            os_detection: 'nmap -O {target}',
+            vuln_scan: 'nmap --script vuln --top-ports 50 -T4 {target}',
+            stealth_scan: 'nmap -sS --top-ports 100 -T4 {target}'
         }
     },
     masscan: {
         name: 'Masscan', category: 'Network Recon',
         description: 'High-speed port scanner',
         commands: {
-            basic: 'masscan {target} -p80,443,8080,8443 --rate=1000'
+            basic: 'masscan {target} -p80,443,8080,8443 --rate=1000',
+            fast_scan: 'masscan {target} -p1-65535 --rate=1000',
+            web_ports: 'masscan {target} -p80,443,8080,8443 --rate=1000'
         }
     },
     rustscan: {
         name: 'RustScan', category: 'Network Recon',
         description: 'Ultra-fast port scanner',
         commands: {
-            basic: 'rustscan -a {target} --top 1000 -t 2000'
+            basic: 'rustscan -a {target} --top 1000 -t 2000',
+            full: 'rustscan -a {target} --top 1000 -t 2000 -- -A -sC'
         }
     },
-    amass: {
-        name: 'Amass', category: 'Network Recon',
-        description: 'OWASP subdomain enumeration',
+    zmap: {
+        name: 'ZMap', category: 'Network Recon',
+        description: 'Internet-wide network scanner',
         commands: {
-            enum: 'amass enum -d {target}',
-            intel: 'amass intel -d {target}'
-        }
-    },
-    subfinder: {
-        name: 'Subfinder', category: 'Network Recon',
-        description: 'Subdomain discovery tool',
-        commands: {
-            scan: 'subfinder -d {target}'
-        }
-    },
-    nuclei: {
-        name: 'Nuclei', category: 'Network Recon',
-        description: 'Vulnerability scanner with templates',
-        commands: {
-            basic: 'nuclei -u {target} -c 10 -rl 100'
-        }
-    },
-    fierce: {
-        name: 'Fierce', category: 'Network Recon',
-        description: 'DNS reconnaissance tool',
-        commands: {
-            scan: 'fierce --domain {target}'
-        }
-    },
-    dnsenum: {
-        name: 'DNSEnum', category: 'Network Recon',
-        description: 'DNS enumeration tool',
-        commands: {
-            scan: 'dnsenum {target}'
-        }
-    },
-    autorecon: {
-        name: 'AutoRecon', category: 'Network Recon',
-        description: 'Automated reconnaissance tool',
-        commands: {
-            scan: 'autorecon {target}'
-        }
-    },
-    theharvester: {
-        name: 'theHarvester', category: 'Network Recon',
-        description: 'OSINT information gathering',
-        commands: {
-            scan: 'theHarvester -d {target} -b google'
-        }
-    },
-    responder: {
-        name: 'Responder', category: 'Network Recon',
-        description: 'LLMNR, NBT-NS and MDNS poisoner',
-        commands: {
-            analyze: 'responder -A -I eth0'
-        }
-    },
-    netexec: {
-        name: 'NetExec', category: 'Network Recon',
-        description: 'Network service exploitation tool',
-        commands: {
-            scan: 'netexec smb {target}'
-        }
-    },
-    enum4linuxng: {
-        name: 'Enum4linux-ng', category: 'Network Recon',
-        description: 'Linux enumeration tool',
-        commands: {
-            scan: 'enum4linux-ng {target}'
+            probe: 'zmap -p 80 {target}'
         }
     },
 
     // === WEB APPLICATION SECURITY ===
+    nuclei: {
+        name: 'Nuclei', category: 'Web Security',
+        description: 'Vulnerability scanner with 4000+ templates',
+        commands: {
+            basic: 'nuclei -u {target} -c 10 -rl 100',
+            cve: 'nuclei -u {target} -t cves/ -c 10 -rl 50',
+            web: 'nuclei -u {target} -t http/ -c 10 -rl 50',
+            exposed: 'nuclei -u {target} -t exposures/ -c 10 -rl 50',
+            misconfiguration: 'nuclei -u {target} -t misconfiguration/ -c 10 -rl 50',
+            technologies: 'nuclei -u {target} -t technologies/ -c 10 -rl 50'
+        }
+    },
     gobuster: {
         name: 'Gobuster', category: 'Web Security',
-        description: 'Directory and file brute-forcer',
+        description: 'Directory/file & DNS busting',
         commands: {
-            dir: 'gobuster dir -u {target} -w /usr/share/wordlists/dirb/common.txt',
-            dns: 'gobuster dns -d {target} -w /usr/share/wordlists/subdomains.txt'
-        }
-    },
-    feroxbuster: {
-        name: 'Feroxbuster', category: 'Web Security',
-        description: 'Fast directory brute forcer',
-        commands: {
-            scan: 'feroxbuster -u {target} -w /usr/share/wordlists/dirb/common.txt'
-        }
-    },
-    dirsearch: {
-        name: 'DirSearch', category: 'Web Security',
-        description: 'Web path scanner',
-        commands: {
-            scan: 'dirsearch -u {target} -e php,html,js'
+            basic: 'gobuster dir -u https://{target} -w /usr/share/wordlists/dirb/common.txt -t 20 -q -x php,html,txt --no-error',
+            dir: 'gobuster dir -u https://{target} -w /usr/share/wordlists/dirb/common.txt -t 20 -q -x php,html,txt --no-error',
+            dns: 'gobuster dns -d {target} -w /usr/share/wordlists/dnsmap.txt -t 20 -q',
+            vhost: 'gobuster vhost -u https://{target} -w /usr/share/wordlists/subdomains.txt -t 20 -q'
         }
     },
     ffuf: {
-        name: 'FFuf', category: 'Web Security',
+        name: 'Ffuf', category: 'Web Security',
         description: 'Fast web fuzzer',
         commands: {
-            dir: 'ffuf -w /usr/share/wordlists/dirb/common.txt -u {target}/FUZZ'
+            basic: 'ffuf -w /usr/share/wordlists/dirb/common.txt -u https://{target}/FUZZ -t 20 -s',
+            dir: 'ffuf -w /usr/share/wordlists/dirb/common.txt -u https://{target}/FUZZ -t 20 -s',
+            param: 'ffuf -w /usr/share/wordlists/parameters.txt -u https://{target}?FUZZ=test -t 10 -s'
         }
     },
     dirb: {
         name: 'Dirb', category: 'Web Security',
         description: 'Web content scanner',
         commands: {
-            scan: 'dirb {target} /usr/share/wordlists/dirb/common.txt'
-        }
-    },
-    httpx: {
-        name: 'HTTPx', category: 'Web Security',
-        description: 'Fast HTTP toolkit',
-        commands: {
-            probe: 'httpx -u {target} -status-code -tech-detect'
-        }
-    },
-    katana: {
-        name: 'Katana', category: 'Web Security',
-        description: 'Web crawling framework',
-        commands: {
-            crawl: 'katana -u {target} -depth 3'
+            basic: 'dirb {target}',
+            wordlist: 'dirb {target} /usr/share/wordlists/dirb/common.txt'
         }
     },
     nikto: {
         name: 'Nikto', category: 'Web Security',
-        description: 'Web server scanner',
+        description: 'Web server vulnerability scanner',
         commands: {
-            scan: 'nikto -h {target}'
-        }
-    },
-    sqlmap: {
-        name: 'SQLMap', category: 'Web Security',
-        description: 'SQL injection detection tool',
-        commands: {
-            scan: 'sqlmap -u {target} --batch --level=1 --risk=1'
+            basic: 'nikto -h {target}',
+            full: 'nikto -h {target} -C all'
         }
     },
     wpscan: {
         name: 'WPScan', category: 'Web Security',
         description: 'WordPress vulnerability scanner',
         commands: {
-            scan: 'wpscan --url {target}'
+            basic: 'wpscan --url {target}',
+            enumerate: 'wpscan --url {target} --enumerate ap,at,cb,dbe'
+        }
+    },
+    sqlmap: {
+        name: 'SQLMap', category: 'Web Security',
+        description: 'SQL injection testing tool',
+        commands: {
+            basic: 'sqlmap -u {target} --batch',
+            crawl: 'sqlmap -u {target} --crawl=3 --batch'
+        }
+    },
+
+    // === SUBDOMAIN ENUMERATION ===
+    subfinder: {
+        name: 'Subfinder', category: 'Subdomain Enum',
+        description: 'Passive subdomain discovery',
+        commands: {
+            basic: 'subfinder -d {target}',
+            verbose: 'subfinder -d {target} -v'
+        }
+    },
+    assetfinder: {
+        name: 'Assetfinder', category: 'Subdomain Enum',
+        description: 'Find subdomains from various sources',
+        commands: {
+            basic: 'assetfinder {target}'
+        }
+    },
+    amass: {
+        name: 'Amass', category: 'Subdomain Enum',
+        description: 'Advanced subdomain enumeration',
+        commands: {
+            enum: 'amass enum -d {target}',
+            intel: 'amass intel -d {target}'
+        }
+    },
+    sublist3r: {
+        name: 'Sublist3r', category: 'Subdomain Enum',
+        description: 'Enumerate subdomains using OSINT',
+        commands: {
+            basic: 'sublist3r -d {target}'
+        }
+    },
+    dnsrecon: {
+        name: 'DNSRecon', category: 'Subdomain Enum',
+        description: 'DNS enumeration and reconnaissance',
+        commands: {
+            basic: 'dnsrecon -d {target}',
+            bruteforce: 'dnsrecon -d {target} -D /usr/share/wordlists/subdomains.txt -t brt'
+        }
+    },
+
+    // === VULNERABILITY ASSESSMENT ===
+    nessus: {
+        name: 'Nessus', category: 'Vulnerability Assessment',
+        description: 'Comprehensive vulnerability scanner',
+        commands: {
+            simulate: 'echo "Nessus scan simulation for {target}"'
+        }
+    },
+    openvas: {
+        name: 'OpenVAS', category: 'Vulnerability Assessment',
+        description: 'Open source vulnerability scanner',
+        commands: {
+            simulate: 'echo "OpenVAS scan simulation for {target}"'
+        }
+    },
+    trivy: {
+        name: 'Trivy', category: 'Vulnerability Assessment',
+        description: 'Container vulnerability scanner',
+        commands: {
+            image: 'trivy image {target}',
+            fs: 'trivy fs {target}'
+        }
+    },
+
+    // === CLOUD SECURITY ===
+    prowler: {
+        name: 'Prowler', category: 'Cloud Security',
+        description: 'AWS security assessment',
+        commands: {
+            simulate: 'echo "Prowler AWS assessment simulation"'
+        }
+    },
+    scout_suite: {
+        name: 'ScoutSuite', category: 'Cloud Security',
+        description: 'Multi-cloud security auditing',
+        commands: {
+            simulate: 'echo "ScoutSuite cloud audit simulation"'
+        }
+    },
+
+    // === OSINT & INFORMATION GATHERING ===
+    theharvester: {
+        name: 'TheHarvester', category: 'OSINT',
+        description: 'E-mail, subdomain, and people names harvester',
+        commands: {
+            basic: 'theharvester -d {target} -l 500 -b google',
+            all: 'theharvester -d {target} -l 500 -b all'
+        }
+    },
+    sherlock: {
+        name: 'Sherlock', category: 'OSINT',
+        description: 'Hunt down social media accounts',
+        commands: {
+            basic: 'sherlock {target}'
+        }
+    },
+    shodan: {
+        name: 'Shodan CLI', category: 'OSINT',
+        description: 'Search engine for internet-connected devices',
+        commands: {
+            search: 'shodan search {target}',
+            host: 'shodan host {target}'
+        }
+    },
+    censys: {
+        name: 'Censys', category: 'OSINT',
+        description: 'Internet device search engine',
+        commands: {
+            simulate: 'echo "Censys search simulation for {target}"'
+        }
+    },
+
+    // === WIRELESS SECURITY ===
+    aircrack: {
+        name: 'Aircrack-ng', category: 'Wireless',
+        description: 'Wireless network security suite',
+        commands: {
+            simulate: 'echo "Aircrack-ng wireless security simulation"'
+        }
+    },
+    reaver: {
+        name: 'Reaver', category: 'Wireless',
+        description: 'WPS security testing',
+        commands: {
+            simulate: 'echo "Reaver WPS testing simulation"'
+        }
+    },
+
+    // === CRYPTOGRAPHY & HASHING ===
+    hashcat: {
+        name: 'Hashcat', category: 'Cryptography',
+        description: 'Advanced password cracking',
+        commands: {
+            simulate: 'echo "Hashcat password cracking simulation"'
+        }
+    },
+    john: {
+        name: 'John the Ripper', category: 'Cryptography',
+        description: 'Password cracking tool',
+        commands: {
+            simulate: 'echo "John the Ripper simulation"'
+        }
+    },
+    hydra: {
+        name: 'Hydra', category: 'Cryptography',
+        description: 'Network login cracker',
+        commands: {
+            simulate: 'echo "Hydra brute force simulation for {target}"'
+        }
+    },
+
+    // === BINARY ANALYSIS ===
+    binwalk: {
+        name: 'Binwalk', category: 'Binary Analysis',
+        description: 'Firmware analysis tool',
+        commands: {
+            simulate: 'echo "Binwalk binary analysis simulation"'
+        }
+    },
+    strings: {
+        name: 'Strings', category: 'Binary Analysis',
+        description: 'Extract printable strings from files',
+        commands: {
+            basic: 'strings {target}'
+        }
+    },
+
+    // === BASIC NETWORK TOOLS ===
+    ping: {
+        name: 'Ping', category: 'Basic Network',
+        description: 'Basic connectivity test',
+        commands: {
+            basic: 'ping -c 4 {target}',
+            flood: 'ping -f -c 10 {target}'
+        }
+    },
+    traceroute: {
+        name: 'Traceroute', category: 'Basic Network',
+        description: 'Trace network path',
+        commands: {
+            basic: 'traceroute {target}'
+        }
+    },
+    nslookup: {
+        name: 'NSLookup', category: 'Basic Network',
+        description: 'DNS lookup utility',
+        commands: {
+            basic: 'nslookup {target}'
+        }
+    },
+    dig: {
+        name: 'Dig', category: 'Basic Network',
+        description: 'DNS lookup tool',
+        commands: {
+            basic: 'dig {target}',
+            mx: 'dig MX {target}',
+            txt: 'dig TXT {target}'
+        }
+    },
+    whois: {
+        name: 'Whois', category: 'Basic Network',
+        description: 'Domain registration info',
+        commands: {
+            basic: 'whois {target}'
+        }
+    },
+
+    // === SOCIAL ENGINEERING ===
+    setoolkit: {
+        name: 'Social Engineer Toolkit', category: 'Social Engineering',
+        description: 'Social engineering testing framework',
+        commands: {
+            simulate: 'echo "SET social engineering simulation"'
+        }
+    },
+
+    // === MOBILE SECURITY ===
+    mobsf: {
+        name: 'Mobile Security Framework', category: 'Mobile Security',
+        description: 'Mobile app security testing',
+        commands: {
+            simulate: 'echo "MobSF mobile security simulation"'
+        }
+    },
+
+    // === BASIC RECONNAISSANCE TOOLS ===
+    curl: {
+        name: 'cURL', category: 'Network Recon',
+        description: 'HTTP client for web testing',
+        commands: {
+            basic: 'curl -I {target}',
+            headers: 'curl -I -L {target}',
+            verbose: 'curl -I -L -v {target}',
+            ssl: 'curl -I -k {target}'
+        }
+    },
+    dig: {
+        name: 'Dig', category: 'DNS Recon',
+        description: 'DNS lookup utility',
+        commands: {
+            basic: 'dig {target}',
+            mx: 'dig MX {target}',
+            ns: 'dig NS {target}',
+            txt: 'dig TXT {target}',
+            any: 'dig ANY {target}'
+        }
+    },
+    whois: {
+        name: 'Whois', category: 'OSINT',
+        description: 'Domain registration information',
+        commands: {
+            basic: 'whois {target}',
+            verbose: 'whois -v {target}'
+        }
+    },
+    host: {
+        name: 'Host', category: 'DNS Recon',
+        description: 'DNS lookup utility',
+        commands: {
+            basic: 'host {target}',
+            all: 'host -a {target}',
+            mx: 'host -t MX {target}',
+            ns: 'host -t NS {target}'
+        }
+    },
+    nslookup: {
+        name: 'NSLookup', category: 'DNS Recon',
+        description: 'DNS lookup utility',
+        commands: {
+            basic: 'nslookup {target}',
+            mx: 'nslookup -query=MX {target}',
+            ns: 'nslookup -query=NS {target}'
+        }
+    },
+    wget: {
+        name: 'Wget', category: 'Web Security',
+        description: 'Web content retriever',
+        commands: {
+            basic: 'wget --spider -v {target}',
+            headers: 'wget --spider -S {target}',
+            recursive: 'wget --spider -r -l 1 {target}'
+        }
+    },
+    telnet: {
+        name: 'Telnet', category: 'Network Recon',
+        description: 'Port connectivity tester',
+        commands: {
+            basic: 'timeout 5 telnet {target} 80',
+            https: 'timeout 5 telnet {target} 443',
+            ssh: 'timeout 5 telnet {target} 22',
+            ftp: 'timeout 5 telnet {target} 21'
+        }
+    },
+
+    // === ADDITIONAL HEXSTRIKE INTEGRATION (85+ MORE TOOLS) ===
+
+    // Network Tools
+    rustscan: {
+        name: 'RustScan', category: 'Network Recon',
+        description: 'Ultra-fast port scanner',
+        commands: {
+            basic: 'rustscan -a {target} --top 1000 -t 2000',
+            full: 'rustscan -a {target} --top 1000 -t 2000'
+        }
+    },
+    autorecon: {
+        name: 'AutoRecon', category: 'Network Recon',
+        description: 'Automated reconnaissance',
+        commands: {
+            basic: 'autorecon {target}'
+        }
+    },
+    nbtscan: {
+        name: 'NBTScan', category: 'Network Recon',
+        description: 'NetBIOS scanner',
+        commands: {
+            scan: 'nbtscan {target}'
+        }
+    },
+    'arp-scan': {
+        name: 'ARP-Scan', category: 'Network Recon',
+        description: 'ARP network scanner',
+        commands: {
+            local: 'arp-scan -l',
+            target: 'arp-scan {target}'
+        }
+    },
+    responder: {
+        name: 'Responder', category: 'Network Security',
+        description: 'LLMNR/NBT-NS poisoner',
+        commands: {
+            simulate: 'echo "Responder LLMNR/NBT-NS simulation for {target}"'
+        }
+    },
+    nxc: {
+        name: 'NetExec', category: 'Network Security',
+        description: 'Network service exploitation',
+        commands: {
+            smb: 'nxc smb {target}'
+        }
+    },
+    'enum4linux-ng': {
+        name: 'Enum4Linux-NG', category: 'Network Recon',
+        description: 'Enhanced Linux/Windows enumeration',
+        commands: {
+            basic: 'enum4linux-ng {target}'
+        }
+    },
+    rpcclient: {
+        name: 'RPCClient', category: 'Network Recon',
+        description: 'Microsoft RPC client',
+        commands: {
+            connect: 'rpcclient -N {target}'
+        }
+    },
+    enum4linux: {
+        name: 'Enum4Linux', category: 'Network Recon',
+        description: 'Linux/Windows enumeration',
+        commands: {
+            basic: 'enum4linux {target}'
+        }
+    },
+
+    // Web Security Tools
+    ffuf: {
+        name: 'Ffuf', category: 'Web Security',
+        description: 'Fast web fuzzer',
+        commands: {
+            basic: 'ffuf -w /usr/share/wordlists/dirb/common.txt -u {target}/FUZZ -t 20 -s',
+            dir: 'ffuf -w /usr/share/wordlists/dirb/common.txt -u {target}/FUZZ -t 20 -s',
+            param: 'ffuf -w /usr/share/wordlists/parameters.txt -u {target}?FUZZ=test -t 20 -s'
+        }
+    },
+    feroxbuster: {
+        name: 'FeroxBuster', category: 'Web Security',
+        description: 'Fast content discovery',
+        commands: {
+            basic: 'feroxbuster -u {target} -t 10 -d 2 -q'
+        }
+    },
+    dirsearch: {
+        name: 'DirSearch', category: 'Web Security',
+        description: 'Web path scanner',
+        commands: {
+            basic: 'dirsearch -u {target}'
+        }
+    },
+    dotdotpwn: {
+        name: 'DotDotPwn', category: 'Web Security',
+        description: 'Directory traversal fuzzer',
+        commands: {
+            http: 'dotdotpwn -m http -h {target}'
+        }
+    },
+    xsser: {
+        name: 'XSSer', category: 'Web Security',
+        description: 'XSS detection tool',
+        commands: {
+            scan: 'xsser -u {target}'
+        }
+    },
+    wfuzz: {
+        name: 'Wfuzz', category: 'Web Security',
+        description: 'Web application fuzzer',
+        commands: {
+            dir: 'wfuzz -c -z file,/usr/share/wordlists/dirb/common.txt {target}/FUZZ'
+        }
+    },
+    gau: {
+        name: 'GAU', category: 'Web Security',
+        description: 'Get All URLs',
+        commands: {
+            basic: 'gau {target}'
+        }
+    },
+    waybackurls: {
+        name: 'Wayback URLs', category: 'Web Security',
+        description: 'Fetch URLs from Wayback Machine',
+        commands: {
+            basic: 'waybackurls {target}'
         }
     },
     arjun: {
@@ -322,119 +680,128 @@ const securityTools = {
     },
     paramspider: {
         name: 'ParamSpider', category: 'Web Security',
-        description: 'Parameter mining tool',
+        description: 'Parameter mining',
         commands: {
-            scan: 'paramspider -d {target}'
+            mine: 'paramspider -d {target}'
+        }
+    },
+    x8: {
+        name: 'X8', category: 'Web Security',
+        description: 'Hidden parameter discovery',
+        commands: {
+            basic: 'x8 -u {target}'
+        }
+    },
+    jaeles: {
+        name: 'Jaeles', category: 'Web Security',
+        description: 'Powerful web scanner',
+        commands: {
+            scan: 'jaeles scan -u {target}'
         }
     },
     dalfox: {
         name: 'DalFox', category: 'Web Security',
         description: 'XSS scanner and parameter analysis',
         commands: {
-            scan: 'dalfox url {target}'
+            basic: 'dalfox url {target}'
+        }
+    },
+    httpx: {
+        name: 'HTTPx', category: 'Web Security',
+        description: 'Fast HTTP toolkit',
+        commands: {
+            basic: 'httpx -u {target}',
+            probe: 'httpx -u {target} -probe',
+            title: 'httpx -u {target} -title',
+            tech: 'httpx -u {target} -tech-detect'
         }
     },
     wafw00f: {
-        name: 'WafW00f', category: 'Web Security',
+        name: 'WAFw00f', category: 'Web Security',
         description: 'Web Application Firewall detection',
         commands: {
-            scan: 'wafw00f {target}'
+            detect: 'wafw00f {target}'
+        }
+    },
+    katana: {
+        name: 'Katana', category: 'Web Security',
+        description: 'Next-generation crawling framework',
+        commands: {
+            crawl: 'katana -u {target}'
+        }
+    },
+    hakrawler: {
+        name: 'Hakrawler', category: 'Web Security',
+        description: 'Fast web crawler',
+        commands: {
+            crawl: 'hakrawler -url {target}'
         }
     },
 
-    // === PASSWORD & AUTHENTICATION ===
-    hydra: {
-        name: 'Hydra', category: 'Password Attack',
-        description: 'Network login cracker',
-        commands: {
-            ssh: 'hydra -l admin -P /usr/share/wordlists/rockyou.txt {target} ssh',
-            http: 'hydra -l admin -P /usr/share/wordlists/rockyou.txt {target} http-get'
-        }
-    },
-    john: {
-        name: 'John the Ripper', category: 'Password Attack',
-        description: 'Password cracking tool',
-        commands: {
-            crack: 'john --wordlist=/usr/share/wordlists/rockyou.txt {target}'
-        }
-    },
-    hashcat: {
-        name: 'Hashcat', category: 'Password Attack',
-        description: 'Advanced password recovery',
-        commands: {
-            md5: 'hashcat -m 0 -a 0 {target} /usr/share/wordlists/rockyou.txt'
-        }
-    },
+    // Password Tools
     medusa: {
-        name: 'Medusa', category: 'Password Attack',
+        name: 'Medusa', category: 'Password Security',
         description: 'Parallel brute-force tool',
         commands: {
-            ssh: 'medusa -h {target} -u admin -P /usr/share/wordlists/rockyou.txt -M ssh'
+            simulate: 'echo "Medusa brute-force simulation for {target}"'
         }
     },
     patator: {
-        name: 'Patator', category: 'Password Attack',
+        name: 'Patator', category: 'Password Security',
         description: 'Multi-purpose brute-forcer',
         commands: {
-            ssh: 'patator ssh_login host={target} user=admin password=FILE0 0=/usr/share/wordlists/rockyou.txt'
+            simulate: 'echo "Patator brute-force simulation for {target}"'
         }
     },
-    crackmapexec: {
-        name: 'CrackMapExec', category: 'Password Attack',
-        description: 'Network service exploitation',
-        commands: {
-            smb: 'crackmapexec smb {target} -u admin -p admin'
-        }
-    },
-    evilwinrm: {
-        name: 'Evil-WinRM', category: 'Password Attack',
-        description: 'Windows Remote Management tool',
-        commands: {
-            connect: 'evil-winrm -i {target} -u admin -p password'
-        }
-    },
-    hashidentifier: {
-        name: 'Hash-Identifier', category: 'Password Attack',
-        description: 'Hash type identifier',
+    'hash-identifier': {
+        name: 'Hash Identifier', category: 'Password Security',
+        description: 'Hash type identification',
         commands: {
             identify: 'hash-identifier'
         }
     },
     ophcrack: {
-        name: 'Ophcrack', category: 'Password Attack',
+        name: 'Ophcrack', category: 'Password Security',
         description: 'Windows password cracker',
         commands: {
-            crack: 'ophcrack -t /usr/share/ophcrack/tables/vista_free -f {target}'
+            simulate: 'echo "Ophcrack password cracking simulation"'
+        }
+    },
+    'hashcat-utils': {
+        name: 'Hashcat Utils', category: 'Password Security',
+        description: 'Hashcat utility tools',
+        commands: {
+            info: 'hashcat --help'
         }
     },
 
-    // === BINARY/REVERSE ENGINEERING ===
+    // Binary Analysis Tools
     gdb: {
         name: 'GDB', category: 'Binary Analysis',
         description: 'GNU Debugger',
         commands: {
-            debug: 'gdb {target}'
+            version: 'gdb --version'
         }
     },
     radare2: {
         name: 'Radare2', category: 'Binary Analysis',
         description: 'Reverse engineering framework',
         commands: {
-            analyze: 'r2 -A {target}'
+            version: 'r2 -v'
         }
     },
     binwalk: {
         name: 'Binwalk', category: 'Binary Analysis',
         description: 'Firmware analysis tool',
         commands: {
-            extract: 'binwalk -e {target}'
+            simulate: 'echo "Binwalk binary analysis simulation for {target} - requires binary file"'
         }
     },
-    ghidra: {
-        name: 'Ghidra', category: 'Binary Analysis',
-        description: 'NSA reverse engineering suite',
+    ropgadget: {
+        name: 'ROPgadget', category: 'Binary Analysis',
+        description: 'ROP gadget finder',
         commands: {
-            analyze: 'ghidra {target}'
+            find: 'ROPgadget --binary {target}'
         }
     },
     checksec: {
@@ -444,383 +811,451 @@ const securityTools = {
             check: 'checksec --file={target}'
         }
     },
-    strings: {
-        name: 'Strings', category: 'Binary Analysis',
-        description: 'Extract printable strings',
-        commands: {
-            extract: 'strings {target}'
-        }
-    },
     objdump: {
         name: 'Objdump', category: 'Binary Analysis',
-        description: 'Object file disassembler',
+        description: 'Object file dumper',
         commands: {
+            headers: 'objdump -h {target}',
             disasm: 'objdump -d {target}'
         }
     },
+
+    // Forensics Tools
     volatility3: {
-        name: 'Volatility3', category: 'Binary Analysis',
+        name: 'Volatility3', category: 'Digital Forensics',
         description: 'Memory forensics framework',
         commands: {
-            info: 'vol3 -f {target} windows.info'
-        }
-    },
-    foremost: {
-        name: 'Foremost', category: 'Binary Analysis',
-        description: 'File carving tool',
-        commands: {
-            recover: 'foremost -i {target} -o output'
+            info: 'vol -h'
         }
     },
     steghide: {
-        name: 'Steghide', category: 'Binary Analysis',
+        name: 'Steghide', category: 'Digital Forensics',
         description: 'Steganography tool',
         commands: {
             extract: 'steghide extract -sf {target}'
         }
     },
+    hashpump: {
+        name: 'HashPump', category: 'Digital Forensics',
+        description: 'Hash length extension attack tool',
+        commands: {
+            version: 'hashpump --help'
+        }
+    },
+    foremost: {
+        name: 'Foremost', category: 'Digital Forensics',
+        description: 'File carving tool',
+        commands: {
+            carve: 'foremost -i {target}'
+        }
+    },
     exiftool: {
-        name: 'ExifTool', category: 'Binary Analysis',
+        name: 'ExifTool', category: 'Digital Forensics',
         description: 'Metadata extraction tool',
         commands: {
             extract: 'exiftool {target}'
         }
     },
-
-    // === CLOUD SECURITY ===
-    prowler: {
-        name: 'Prowler', category: 'Cloud Security',
-        description: 'AWS security assessment',
+    strings: {
+        name: 'Strings', category: 'Digital Forensics',
+        description: 'Extract strings from files',
         commands: {
-            scan: 'prowler aws'
+            extract: 'strings {target}'
         }
     },
-    scoutsuite: {
+    xxd: {
+        name: 'XXD', category: 'Digital Forensics',
+        description: 'Hex dump utility',
+        commands: {
+            dump: 'xxd {target}'
+        }
+    },
+    photorec: {
+        name: 'PhotoRec', category: 'Digital Forensics',
+        description: 'File recovery tool',
+        commands: {
+            info: 'photorec /help'
+        }
+    },
+    testdisk: {
+        name: 'TestDisk', category: 'Digital Forensics',
+        description: 'Partition recovery tool',
+        commands: {
+            info: 'testdisk /help'
+        }
+    },
+    scalpel: {
+        name: 'Scalpel', category: 'Digital Forensics',
+        description: 'File carving tool',
+        commands: {
+            carve: 'scalpel {target}'
+        }
+    },
+    'bulk-extractor': {
+        name: 'Bulk Extractor', category: 'Digital Forensics',
+        description: 'Digital forensics extraction tool',
+        commands: {
+            extract: 'bulk_extractor {target}'
+        }
+    },
+
+    // Cloud Security Tools
+    prowler: {
+        name: 'Prowler', category: 'Cloud Security',
+        description: 'AWS/Azure/GCP security scanner',
+        commands: {
+            aws: 'prowler aws'
+        }
+    },
+    'scout-suite': {
         name: 'Scout Suite', category: 'Cloud Security',
-        description: 'Multi-cloud security auditing',
+        description: 'Cloud security auditing',
         commands: {
             aws: 'scout aws'
         }
     },
     trivy: {
         name: 'Trivy', category: 'Cloud Security',
-        description: 'Container vulnerability scanner',
+        description: 'Vulnerability scanner for containers',
         commands: {
-            image: 'trivy image {target}',
-            fs: 'trivy fs {target}'
+            image: 'trivy image {target}'
         }
     },
-    kubehunter: {
+    'kube-hunter': {
         name: 'Kube-Hunter', category: 'Cloud Security',
         description: 'Kubernetes penetration testing',
         commands: {
             scan: 'kube-hunter --remote {target}'
         }
     },
-    kubebench: {
+    'kube-bench': {
         name: 'Kube-Bench', category: 'Cloud Security',
         description: 'Kubernetes security benchmark',
         commands: {
-            check: 'kube-bench'
+            run: 'kube-bench run'
         }
     },
-    dockerbenchsecurity: {
+    'docker-bench-security': {
         name: 'Docker Bench Security', category: 'Cloud Security',
         description: 'Docker security benchmark',
         commands: {
-            check: 'docker-bench-security'
+            run: 'docker-bench-security'
+        }
+    },
+    checkov: {
+        name: 'Checkov', category: 'Cloud Security',
+        description: 'Infrastructure as Code security scanner',
+        commands: {
+            scan: 'checkov -f {target}'
+        }
+    },
+    terrascan: {
+        name: 'Terrascan', category: 'Cloud Security',
+        description: 'Terraform security scanner',
+        commands: {
+            scan: 'terrascan scan -f {target}'
         }
     },
 
-    // === ADDITIONAL HEXSTRIKE TOOLS ===
-    hakrawler: {
-        name: 'Hakrawler', category: 'Web Security',
-        description: 'Web crawler for URLs',
+    // OSINT Tools
+    amass: {
+        name: 'Amass', category: 'OSINT',
+        description: 'In-depth subdomain enumeration',
         commands: {
-            crawl: 'hakrawler -url {target} -depth 3'
+            enum: 'amass enum -d {target}'
         }
     },
-    gau: {
-        name: 'GAU', category: 'Web Security',
-        description: 'Get All URLs from sources',
+    subfinder: {
+        name: 'Subfinder', category: 'OSINT',
+        description: 'Subdomain discovery tool',
         commands: {
-            fetch: 'gau {target}'
+            basic: 'subfinder -d {target} -t 100 -silent'
         }
     },
-    waybackurls: {
-        name: 'Waybackurls', category: 'Web Security',
-        description: 'Fetch URLs from Wayback Machine',
+    fierce: {
+        name: 'Fierce', category: 'OSINT',
+        description: 'Domain scanner',
         commands: {
-            fetch: 'waybackurls {target}'
+            scan: 'fierce --domain {target}'
         }
     },
-    x8: {
-        name: 'X8', category: 'Web Security',
-        description: 'Hidden parameter discovery',
+    dnsenum: {
+        name: 'DNSEnum', category: 'OSINT',
+        description: 'DNS enumeration tool',
         commands: {
-            scan: 'x8 -u {target}'
+            enum: 'dnsenum {target}'
         }
     },
-    jaeles: {
-        name: 'Jaeles', category: 'Web Security',
-        description: 'Web application security scanner',
+    theharvester: {
+        name: 'TheHarvester', category: 'OSINT',
+        description: 'Email and subdomain gatherer',
         commands: {
-            scan: 'jaeles scan -u {target}'
+            basic: 'theharvester -d {target} -b google'
         }
     },
-    testssl: {
-        name: 'testssl.sh', category: 'Web Security',
-        description: 'SSL/TLS security checker',
-        commands: {
-            check: 'testssl {target}'
-        }
-    },
-    sslscan: {
-        name: 'SSLScan', category: 'Web Security',
-        description: 'SSL configuration scanner',
-        commands: {
-            scan: 'sslscan {target}'
-        }
-    },
-    sslyze: {
-        name: 'SSLyze', category: 'Web Security',
-        description: 'SSL configuration analyzer',
-        commands: {
-            analyze: 'sslyze {target}'
-        }
-    },
-    whatweb: {
-        name: 'WhatWeb', category: 'Web Security',
-        description: 'Web technology identifier',
-        commands: {
-            scan: 'whatweb {target}'
-        }
-    },
-    jwttool: {
-        name: 'JWT-Tool', category: 'Web Security',
-        description: 'JWT security testing',
-        commands: {
-            test: 'jwt_tool {target}'
-        }
-    },
-    wfuzz: {
-        name: 'Wfuzz', category: 'Web Security',
-        description: 'Web application fuzzer',
-        commands: {
-            fuzz: 'wfuzz -w /usr/share/wordlists/dirb/common.txt {target}/FUZZ'
-        }
-    },
-    commix: {
-        name: 'Commix', category: 'Web Security',
-        description: 'Command injection exploiter',
-        commands: {
-            test: 'commix -u {target}'
-        }
-    },
-    nosqlmap: {
-        name: 'NoSQLMap', category: 'Web Security',
-        description: 'NoSQL injection testing',
-        commands: {
-            test: 'nosqlmap -u {target}'
-        }
-    },
-    tplmap: {
-        name: 'Tplmap', category: 'Web Security',
-        description: 'Template injection testing',
-        commands: {
-            test: 'tplmap -u {target}'
-        }
-    },
-
-    // === CTF & FORENSICS ===
-    photorec: {
-        name: 'PhotoRec', category: 'Forensics',
-        description: 'File recovery tool',
-        commands: {
-            recover: 'photorec {target}'
-        }
-    },
-    testdisk: {
-        name: 'TestDisk', category: 'Forensics',
-        description: 'Disk recovery tool',
-        commands: {
-            recover: 'testdisk {target}'
-        }
-    },
-    stegsolve: {
-        name: 'Stegsolve', category: 'Forensics',
-        description: 'Steganography solver',
-        commands: {
-            analyze: 'stegsolve {target}'
-        }
-    },
-    zsteg: {
-        name: 'Zsteg', category: 'Forensics',
-        description: 'PNG/BMP steganography',
-        commands: {
-            analyze: 'zsteg {target}'
-        }
-    },
-    outguess: {
-        name: 'Outguess', category: 'Forensics',
-        description: 'Steganographic detection',
-        commands: {
-            extract: 'outguess -r {target} output.txt'
-        }
-    },
-    scalpel: {
-        name: 'Scalpel', category: 'Forensics',
-        description: 'File carving tool',
-        commands: {
-            carve: 'scalpel -o output {target}'
-        }
-    },
-    bulkextractor: {
-        name: 'Bulk Extractor', category: 'Forensics',
-        description: 'Digital forensics tool',
-        commands: {
-            extract: 'bulk_extractor -o output {target}'
-        }
-    },
-    autopsy: {
-        name: 'Autopsy', category: 'Forensics',
-        description: 'Digital forensics platform',
-        commands: {
-            analyze: 'autopsy'
-        }
-    },
-    sleuthkit: {
-        name: 'Sleuth Kit', category: 'Forensics',
-        description: 'Digital investigation tools',
-        commands: {
-            analyze: 'fls {target}'
-        }
-    },
-
-    // === OSINT & INTELLIGENCE ===
     sherlock: {
         name: 'Sherlock', category: 'OSINT',
-        description: 'Social media username search',
+        description: 'Username hunter across social networks',
         commands: {
-            search: 'sherlock {target}'
+            hunt: 'sherlock {target}'
         }
     },
-    socialanalyzer: {
-        name: 'Social-Analyzer', category: 'OSINT',
-        description: 'Social media analysis',
+    'social-analyzer': {
+        name: 'Social Analyzer', category: 'OSINT',
+        description: 'Social media analysis tool',
         commands: {
             analyze: 'social-analyzer --username {target}'
         }
     },
-    reconng: {
-        name: 'Recon-ng', category: 'OSINT',
+    'recon-ng': {
+        name: 'Recon-NG', category: 'OSINT',
         description: 'Reconnaissance framework',
         commands: {
-            recon: 'recon-ng'
-        }
-    },
-    maltego: {
-        name: 'Maltego', category: 'OSINT',
-        description: 'Link analysis platform',
-        commands: {
-            analyze: 'maltego'
+            info: 'recon-ng --help'
         }
     },
     spiderfoot: {
         name: 'SpiderFoot', category: 'OSINT',
-        description: 'OSINT automation',
+        description: 'OSINT automation tool',
         commands: {
             scan: 'spiderfoot -s {target}'
         }
     },
-    trufflehog: {
-        name: 'TruffleHog', category: 'OSINT',
-        description: 'Secret scanner',
+    'shodan-cli': {
+        name: 'Shodan CLI', category: 'OSINT',
+        description: 'Shodan command-line interface',
         commands: {
-            scan: 'trufflehog {target}'
+            search: 'shodan search {target}'
+        }
+    },
+    'censys-cli': {
+        name: 'Censys CLI', category: 'OSINT',
+        description: 'Censys command-line interface',
+        commands: {
+            search: 'censys search {target}'
         }
     },
 
-    // === CRYPTOGRAPHY ===
-    cyberchef: {
-        name: 'CyberChef', category: 'Cryptography',
-        description: 'Cyber Swiss Army Knife',
+    // Exploitation Tools
+    metasploit: {
+        name: 'Metasploit', category: 'Exploitation',
+        description: 'Exploitation framework',
         commands: {
-            decode: 'cyberchef'
+            console: 'msfconsole'
         }
     },
-    cipheridentifier: {
-        name: 'Cipher-Identifier', category: 'Cryptography',
-        description: 'Cipher type identification',
-        commands: {
-            identify: 'cipher-identifier {target}'
-        }
-    },
-    rsatool: {
-        name: 'RSATool', category: 'Cryptography',
-        description: 'RSA cryptanalysis',
-        commands: {
-            crack: 'rsatool -n {target}'
-        }
-    },
-    factordb: {
-        name: 'FactorDB', category: 'Cryptography',
-        description: 'Integer factorization database',
-        commands: {
-            query: 'factordb {target}'
-        }
-    },
-
-    // === SPECIAL TOOLS ===
-    xsser: {
-        name: 'XSSer', category: 'Web Security',
-        description: 'XSS detection tool',
-        commands: {
-            scan: 'xsser -u {target}'
-        }
-    },
-    searchsploit: {
-        name: 'SearchSploit', category: 'Exploit',
+    'exploit-db': {
+        name: 'Exploit Database', category: 'Exploitation',
         description: 'Exploit database search',
         commands: {
             search: 'searchsploit {target}'
         }
     },
-    metasploit: {
-        name: 'Metasploit', category: 'Exploit',
-        description: 'Penetration testing framework',
+    searchsploit: {
+        name: 'SearchSploit', category: 'Exploitation',
+        description: 'Exploit database search tool',
         commands: {
-            search: 'msfconsole -q -x "search {target}; exit"'
+            search: 'searchsploit {target}'
+        }
+    },
+    msfvenom: {
+        name: 'MSFVenom', category: 'Exploitation',
+        description: 'Payload generator',
+        commands: {
+            list: 'msfvenom -l payloads'
+        }
+    },
+    msfconsole: {
+        name: 'MSFConsole', category: 'Exploitation',
+        description: 'Metasploit console',
+        commands: {
+            start: 'msfconsole'
         }
     },
 
-    // === AI SECURITY TOOLS ===
+    // API Tools
+    'api-schema-analyzer': {
+        name: 'API Schema Analyzer', category: 'API Security',
+        description: 'API schema analysis',
+        commands: {
+            analyze: 'echo "API schema analysis for {target}"'
+        }
+    },
+    curl: {
+        name: 'cURL', category: 'API Security',
+        description: 'Command line HTTP client',
+        commands: {
+            get: 'curl {target}',
+            headers: 'curl -I {target}'
+        }
+    },
+    httpie: {
+        name: 'HTTPie', category: 'API Security',
+        description: 'Human-friendly HTTP client',
+        commands: {
+            get: 'http GET {target}'
+        }
+    },
+    anew: {
+        name: 'Anew', category: 'API Security',
+        description: 'Append new lines to files',
+        commands: {
+            filter: 'echo {target} | anew'
+        }
+    },
+    qsreplace: {
+        name: 'QSReplace', category: 'API Security',
+        description: 'Query string replacer',
+        commands: {
+            replace: 'echo {target} | qsreplace'
+        }
+    },
+    uro: {
+        name: 'Uro', category: 'API Security',
+        description: 'URL parameter remover',
+        commands: {
+            clean: 'echo {target} | uro'
+        }
+    },
+
+    // Wireless Tools
+    kismet: {
+        name: 'Kismet', category: 'Wireless Security',
+        description: 'Wireless network detector',
+        commands: {
+            info: 'kismet --help'
+        }
+    },
+    wireshark: {
+        name: 'Wireshark', category: 'Network Analysis',
+        description: 'Network protocol analyzer',
+        commands: {
+            version: 'tshark --version'
+        }
+    },
+    tshark: {
+        name: 'TShark', category: 'Network Analysis',
+        description: 'Command-line network analyzer',
+        commands: {
+            capture: 'tshark -i any'
+        }
+    },
+    tcpdump: {
+        name: 'TCPDump', category: 'Network Analysis',
+        description: 'Packet capture tool',
+        commands: {
+            capture: 'tcpdump -i any'
+        }
+    },
+
+    // Additional Essential Tools
+    smbmap: {
+        name: 'SMBMap', category: 'Network Security',
+        description: 'SMB share enumeration',
+        commands: {
+            enum: 'smbmap -H {target}'
+        }
+    },
+    volatility: {
+        name: 'Volatility', category: 'Digital Forensics',
+        description: 'Memory analysis framework',
+        commands: {
+            info: 'volatility --info'
+        }
+    },
+    sleuthkit: {
+        name: 'The Sleuth Kit', category: 'Digital Forensics',
+        description: 'Digital forensics tools',
+        commands: {
+            info: 'fls --help'
+        }
+    },
+    autopsy: {
+        name: 'Autopsy', category: 'Digital Forensics',
+        description: 'Digital forensics platform',
+        commands: {
+            info: 'autopsy --help'
+        }
+    },
+    'evil-winrm': {
+        name: 'Evil-WinRM', category: 'Network Security',
+        description: 'Windows Remote Management shell',
+        commands: {
+            connect: 'evil-winrm -i {target}'
+        }
+    },
+    'airmon-ng': {
+        name: 'Airmon-NG', category: 'Wireless Security',
+        description: 'Monitor mode enabler',
+        commands: {
+            start: 'airmon-ng start wlan0'
+        }
+    },
+    'airodump-ng': {
+        name: 'Airodump-NG', category: 'Wireless Security',
+        description: 'Wireless packet capture',
+        commands: {
+            scan: 'airodump-ng wlan0mon'
+        }
+    },
+    'aireplay-ng': {
+        name: 'Aireplay-NG', category: 'Wireless Security',
+        description: 'Wireless packet injection',
+        commands: {
+            deauth: 'aireplay-ng --deauth 10 -a {target} wlan0mon'
+        }
+    },
+    'aircrack-ng': {
+        name: 'Aircrack-NG', category: 'Wireless Security',
+        description: 'WEP/WPA/WPA2 cracker',
+        commands: {
+            crack: 'aircrack-ng -w wordlist.txt capture.cap'
+        }
+    },
+    'graphql-scanner': {
+        name: 'GraphQL Scanner', category: 'Web Security',
+        description: 'GraphQL security scanner',
+        commands: {
+            scan: 'echo "GraphQL scan simulation for {target}"'
+        }
+    },
+    'jwt-analyzer': {
+        name: 'JWT Analyzer', category: 'Web Security',
+        description: 'JSON Web Token analyzer',
+        commands: {
+            analyze: 'echo "JWT analysis simulation for {target}"'
+        }
+    },
+
+    // === AI-POWERED ADVANCED TOOLS ===
     pentestgpt: {
         name: 'PentestGPT', category: 'AI Security',
-        description: 'AI-guided penetration testing framework with GPT-4o intelligence',
+        description: 'AI-powered penetration testing assistant',
         commands: {
-            auto: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python pentestgpt.py --operation auto --target {target}',
-            guided: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python pentestgpt.py --operation guided --target {target}',
-            reasoning: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python pentestgpt.py --reasoning --target {target}',
-            interactive: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python pentestgpt.py --interactive --target {target}',
-            advanced: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python pentestgpt.py --advanced-mode --target {target}',
-            discuss: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python pentestgpt.py --discuss --target {target}',
-            google: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python pentestgpt.py --google --target {target}'
+            interactive: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python -m pentestgpt.main',
+            scan: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python -m pentestgpt.main --target {target}',
+            recon: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python -m pentestgpt.main --mode recon --target {target}'
         }
     },
     hexstrike: {
         name: 'HexStrike AI', category: 'AI Security',
-        description: 'Advanced AI-powered automated security testing platform with 150+ tools',
+        description: 'AI-powered cybersecurity automation with 150+ tools',
         commands: {
-            auto: 'cd /home/terrestrial/Desktop/jaeger-ai/hexstrike-ai && python main.py --target {target} --mode auto',
-            comprehensive: 'cd /home/terrestrial/Desktop/jaeger-ai/hexstrike-ai && python main.py --target {target} --mode comprehensive',
-            ai_enhanced: 'cd /home/terrestrial/Desktop/jaeger-ai/hexstrike-ai && python main.py --target {target} --ai-enhanced',
-            custom: 'cd /home/terrestrial/Desktop/jaeger-ai/hexstrike-ai && python main.py --target {target} --custom-payload',
-            stealth: 'cd /home/terrestrial/Desktop/jaeger-ai/hexstrike-ai && python main.py --target {target} --stealth-mode'
+            scan: 'cd /home/terrestrial/Desktop/jaeger-ai/hexstrike-ai && python hexstrike_server.py --target {target}',
+            advanced: 'cd /home/terrestrial/Desktop/jaeger-ai/hexstrike-ai && python hexstrike_server.py --mode advanced --target {target}',
+            mcp: 'cd /home/terrestrial/Desktop/jaeger-ai/hexstrike-ai && python hexstrike_mcp.py --target {target}'
+        }
+    },
+    pentestgpt: {
+        name: 'PentestGPT', category: 'AI Security',
+        description: 'AI-guided penetration testing framework',
+        commands: {
+            auto: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python main.py --operation auto --target {target}',
+            guided: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python main.py --operation guided --target {target}',
+            reasoning: 'cd /home/terrestrial/Desktop/jaeger-ai/PentestGPT && python main.py --reasoning --target {target}'
         }
     }
 };
-
 
 // Enhanced menu system
 const mainMenu = Markup.inlineKeyboard([
@@ -901,7 +1336,7 @@ Provide a comprehensive security analysis including:
 
 Focus on actionable insights and practical recommendations.`;
 
-    const model = keyType === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-4-fast:free';
+    const model = keyType === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-2-1212';
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -1173,7 +1608,7 @@ Format the response as a professional penetration testing report.`;
                         'X-Title': 'Jaeger AI Ultimate'
                     },
                     body: JSON.stringify({
-                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-4-fast:free',
+                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-2-1212',
                         messages: [
                             { role: 'system', content: 'You are PentestGPT, an expert AI penetration testing assistant.' },
                             { role: 'user', content: prompt }
@@ -1255,7 +1690,7 @@ Provide a detailed HexStrike AI automation report with findings from multiple se
                         'X-Title': 'Jaeger AI Ultimate'
                     },
                     body: JSON.stringify({
-                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-4-fast:free',
+                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-2-1212',
                         messages: [
                             { role: 'system', content: 'You are HexStrike AI, an advanced cybersecurity automation platform.' },
                             { role: 'user', content: prompt }
@@ -1672,7 +2107,7 @@ Respon dalam format JSON:
                         'X-Title': 'Jaeger AI Ultimate'
                     },
                     body: JSON.stringify({
-                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-4-fast:free',
+                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-2-1212',
                         messages: [
                             { role: 'system', content: 'You are an expert cybersecurity AI that understands user intent and recommends the best security testing approach.' },
                             { role: 'user', content: prompt }
