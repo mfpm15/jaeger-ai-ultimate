@@ -1944,9 +1944,38 @@ async function parseNaturalCommand(text) {
     const tools = [];
     try {
         if (securityTools && typeof securityTools === 'object') {
+            // Direct tool name matching
             for (const tool in securityTools) {
                 if (lowText.includes(tool.toLowerCase())) {
                     tools.push(tool);
+                }
+            }
+
+            // Special keyword mappings for common requests
+            const toolMappings = {
+                'xss': ['dalfox', 'xsser'],
+                'xss test': ['dalfox', 'xsser'],
+                'xss scan': ['dalfox', 'xsser'],
+                'cross site scripting': ['dalfox', 'xsser'],
+                'sql injection': ['sqlmap'],
+                'sqli': ['sqlmap'],
+                'directory': ['gobuster', 'dirb'],
+                'directory scan': ['gobuster', 'dirb'],
+                'subdomain': ['subfinder', 'amass'],
+                'subdomain enum': ['subfinder', 'amass'],
+                'port scan': ['nmap'],
+                'vulnerability scan': ['nuclei'],
+                'vuln scan': ['nuclei'],
+                'web scan': ['nikto', 'nuclei'],
+                'fuzzing': ['ffuf', 'wfuzz'],
+                'osint': ['theharvester', 'sherlock']
+            };
+
+            // Check for keyword mappings
+            for (const [keyword, mappedTools] of Object.entries(toolMappings)) {
+                if (lowText.includes(keyword)) {
+                    tools.push(...mappedTools);
+                    break; // Use first match to avoid duplicates
                 }
             }
         }
@@ -1963,6 +1992,18 @@ async function parseNaturalCommand(text) {
             const singleToolPattern = new RegExp(`^(${toolNames})\\s+`, 'i');
             singleTool = singleToolPattern.test(text);
         }
+
+        // Check for single tool requests based on specific keywords
+        const singleToolKeywords = [
+            'xss test', 'xss scan', 'sql injection', 'sqli test',
+            'port scan', 'vulnerability scan', 'directory scan',
+            'subdomain enum', 'osint research'
+        ];
+
+        if (singleToolKeywords.some(keyword => lowText.includes(keyword))) {
+            singleTool = true;
+        }
+
         fullScan = /full|complete|comprehensive|all|bundle|everything/i.test(lowText);
     } catch (error) {
         log.error(`❌ Error checking patterns: ${error.message}`);
@@ -2776,27 +2817,29 @@ All activities are being logged in terminal.
                 results.push(aiResult);
                 toolsToUse = []; // Skip regular tools
             }
-        } else if (parsed.singleTool && parsed.tools.length > 0) {
-            // Single tool execution - manual user choice
-            toolsToUse = [parsed.tools[0]];
-            log.info(`🔧 User memilih single tool: ${toolsToUse[0]}`);
-
-            // Check if it's AI tool manually requested
-            if (parsed.tools[0] === 'pentestgpt') {
-                await ctx.reply(`🤖 **PENTESTGPT - USER REQUEST**\n\n🎯 Target: ${target}\n⚡ Starting AI penetration testing...`);
-                const aiResult = await executePentestGPT(target, ctx, operationId);
-                results.push(aiResult);
-                toolsToUse = []; // Skip regular execution
-            } else if (parsed.tools[0] === 'hexstrike') {
-                await ctx.reply(`🤖 **HEXSTRIKE - USER REQUEST**\n\n🎯 Target: ${target}\n⚡ Starting AI automation...`);
-                const aiResult = await executeHexStrike(target, ctx, operationId);
-                results.push(aiResult);
-                toolsToUse = []; // Skip regular execution
-            }
         } else if (parsed.tools.length > 0) {
-            // Multiple specific tools mentioned
-            toolsToUse = parsed.tools;
-            log.info(`🛠️ User-specified tools: ${toolsToUse.join(', ')}`);
+            if (parsed.singleTool) {
+                // Single tool execution - use only the first tool
+                toolsToUse = [parsed.tools[0]];
+                log.info(`🔧 Single tool selected: ${toolsToUse[0]}`);
+
+                // Check if it's AI tool manually requested
+                if (parsed.tools[0] === 'pentestgpt') {
+                    await ctx.reply(`🤖 **PENTESTGPT - USER REQUEST**\n\n🎯 Target: ${target}\n⚡ Starting AI penetration testing...`);
+                    const aiResult = await executePentestGPT(target, ctx, operationId);
+                    results.push(aiResult);
+                    toolsToUse = []; // Skip regular execution
+                } else if (parsed.tools[0] === 'hexstrike') {
+                    await ctx.reply(`🤖 **HEXSTRIKE - USER REQUEST**\n\n🎯 Target: ${target}\n⚡ Starting AI automation...`);
+                    const aiResult = await executeHexStrike(target, ctx, operationId);
+                    results.push(aiResult);
+                    toolsToUse = []; // Skip regular execution
+                }
+            } else {
+                // Multiple specific tools mentioned
+                toolsToUse = parsed.tools;
+                log.info(`🛠️ User-specified tools: ${toolsToUse.join(', ')}`);
+            }
         } else if (parsed.fullScan) {
             // Full comprehensive scan
             toolsToUse = ['nmap', 'masscan', 'nuclei', 'gobuster', 'ffuf', 'nikto', 'sqlmap', 'httpx', 'wafw00f', 'subfinder', 'amass', 'theharvester', 'sherlock', 'trivy', 'prowler', 'metasploit', 'searchsploit', 'hydra', 'hashcat', 'john', 'binwalk', 'volatility', 'wireshark', 'aircrack'];
