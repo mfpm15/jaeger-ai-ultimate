@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node jaeger-ai.js",
     "dev": "NODE_ENV=development node jaeger-ai.js",
-    "test": "echo \"No tests yet\" && exit 0",
+    "test": "jest --detectOpenHandles --forceExit",
     "setup": "./start.sh"
   },
   "keywords": [
@@ -36,5 +36,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jaeger-ai/jaeger-ai"
+  },
+  "devDependencies": {
+    "jest": "^30.1.3",
+    "supertest": "^7.1.4"
   }
 }

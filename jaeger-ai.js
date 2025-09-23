@@ -62,9 +62,9 @@ const runningProcesses = new Map(); // Track running processes for cancellation
 
 // API Key automatic failover management
 const apiKeyStatus = {
-    sonoma: {
+    grok: {
         key: process.env.OPENROUTER_API_KEY,
-        name: 'Sonoma Sky',
+        name: 'Grok 4 Fast',
         working: true,
         lastError: null,
         errorCount: 0
@@ -79,13 +79,13 @@ const apiKeyStatus = {
 };
 
 function getPrimaryApiKey() {
-    // Priority 1: Sonoma Sky (if working)
-    if (apiKeyStatus.sonoma.key && apiKeyStatus.sonoma.working) {
+    // Priority 1: Grok 4 Fast (if working)
+    if (apiKeyStatus.grok.key && apiKeyStatus.grok.working) {
         return {
-            key: apiKeyStatus.sonoma.key,
-            type: 'sonoma',
-            name: 'Sonoma Sky',
-            model: 'anthropic/claude-3.5-sonnet'
+            key: apiKeyStatus.grok.key,
+            type: 'grok',
+            name: 'Grok 4 Fast',
+            model: 'x-ai/grok-beta'
         };
     }
 
@@ -1336,7 +1336,7 @@ Provide a comprehensive security analysis including:
 
 Focus on actionable insights and practical recommendations.`;
 
-    const model = keyType === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'openrouter/sonoma-sky-alpha';
+    const model = keyType === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-beta';
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -1608,7 +1608,7 @@ Format the response as a professional penetration testing report.`;
                         'X-Title': 'Jaeger AI Ultimate'
                     },
                     body: JSON.stringify({
-                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'openrouter/sonoma-sky-alpha',
+                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-beta',
                         messages: [
                             { role: 'system', content: 'You are PentestGPT, an expert AI penetration testing assistant.' },
                             { role: 'user', content: prompt }
@@ -1690,7 +1690,7 @@ Provide a detailed HexStrike AI automation report with findings from multiple se
                         'X-Title': 'Jaeger AI Ultimate'
                     },
                     body: JSON.stringify({
-                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'openrouter/sonoma-sky-alpha',
+                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-beta',
                         messages: [
                             { role: 'system', content: 'You are HexStrike AI, an advanced cybersecurity automation platform.' },
                             { role: 'user', content: prompt }
@@ -2066,7 +2066,7 @@ Respon dalam format JSON:
                         'X-Title': 'Jaeger AI Ultimate'
                     },
                     body: JSON.stringify({
-                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'openrouter/sonoma-sky-alpha',
+                        model: primaryKey.type === 'deepseek' ? 'deepseek/deepseek-chat-v3.1:free' : 'x-ai/grok-beta',
                         messages: [
                             { role: 'system', content: 'You are an expert cybersecurity AI that understands user intent and recommends the best security testing approach.' },
                             { role: 'user', content: prompt }
@@ -2884,14 +2884,14 @@ ${result.stdout.substring(0, 800)}${result.stdout.length > 800 ? '\n... (truncat
             }
         }
 
-        // AI Analysis Priority: Sonoma Sky -> DeepSeek -> Gemini
+        // AI Analysis Priority: Grok 4 Fast -> DeepSeek -> Gemini
         log.ai('🧠 Starting comprehensive AI analysis');
-        const sonomaAvailable = process.env.OPENROUTER_API_KEY;
+        const grokAvailable = process.env.OPENROUTER_API_KEY;
         const deepseekAvailable = process.env.OPENROUTER_API_KEY_BACKUP;
 
         let aiProvider = 'Gemini';
-        if (sonomaAvailable) {
-            aiProvider = 'OpenRouter (Sonoma Sky)';
+        if (grokAvailable) {
+            aiProvider = 'OpenRouter (Grok 4 Fast)';
         } else if (deepseekAvailable) {
             aiProvider = 'OpenRouter (DeepSeek)';
         }
