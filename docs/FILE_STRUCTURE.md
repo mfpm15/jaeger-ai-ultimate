@@ -215,11 +215,11 @@ src/
 **Critical Variables**:
 ```bash
 # Telegram Bot
-BOT_TOKEN=7678112963:AAFJhiZ_...
+BOT_TOKEN=your_telegram_bot_token_here
 
 # AI Providers
-GEMINI_API_KEY=AIzaSyD9UByGCTYv7vyqKo1ZbfPmGWvh0Pn1Dug
-OPENROUTER_API_KEY=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
+GEMINI_API_KEY=your_gemini_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
 
 # Database
 DATABASE_PATH=./jaeger.db
