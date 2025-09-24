@@ -1639,12 +1639,13 @@ Berdasarkan input tersebut, tentukan:
    - web: Web application testing
    - network: Network testing
 
-2. RECOMMENDED APPROACH (kombinasi untuk maximum power):
-   - combined: SELALU gunakan kombinasi HexStrike + PentestGPT untuk power maksimal
-   - traditional: Hanya jika user secara eksplisit menyebutkan tool tradisional tertentu
-   - single: Hanya jika user menyebutkan 1 tool spesifik dengan jelas
+2. RECOMMENDED APPROACH (sesuai kebutuhan user):
+   - traditional: PRIORITAS UTAMA - Gunakan tools tradisional (nmap, nikto, sqlmap, dll) jika user minta scan/test security normal
+   - hexstrike: Hanya jika user minta "comprehensive scan" atau "full automation"
+   - combined: Hanya jika user eksplisit minta "comprehensive + AI analysis"
+   - single: Jika user menyebutkan 1 tool spesifik dengan jelas
 
-PRIORITAS: SELALU pilih "combined" untuk kombinasi HexStrike + PentestGPT yang paling powerful
+PRIORITAS: UTAMAKAN "traditional" untuk permintaan scan normal seperti port scan, web scan, vulnerability test
 
 3. TOOLS: Jika traditional, rekomendasikan maksimal 5 tools terbaik untuk target tersebut
 
@@ -2364,15 +2365,15 @@ All activities are being logged in terminal.
 
                 // Execute PentestGPT second
                 await ctx.reply(`🧠 *PHASE 2: PENTESTGPT ANALYSIS*`, { parse_mode: 'MarkdownV2' });
-                const pentestResult = await executePentestGPT(target, ctx, operationId);
-                results.push(pentestResult);
+                // const pentestResult = await executePentestGPT(target, ctx, operationId); // Disabled for now
+                // results.push(pentestResult);
 
                 await ctx.reply(`💥 *ULTIMATE COMBO COMPLETE\\!*\nHexStrike \\+ PentestGPT power unleashed\\!`, { parse_mode: 'MarkdownV2' });
                 toolsToUse = []; // Skip regular tools
             } else if (parsed.aiTool === 'pentestgpt') {
                 log.info(`🤖 AI memilih PentestGPT untuk ${target}`);
                 await ctx.reply(`🤖 **AI BRAIN DECISION: PENTESTGPT**\n\n🧠 Analysis: ${parsed.aiRecommendation}\n🎯 Target: ${target}\n⚡ Executing AI-powered penetration testing...`);
-                const aiResult = await executePentestGPT(target, ctx, operationId);
+                // const aiResult = await executePentestGPT(target, ctx, operationId); // Disabled for now
                 results.push(aiResult);
                 toolsToUse = []; // Skip regular tools
             } else if (parsed.aiTool === 'hexstrike') {
@@ -2391,7 +2392,7 @@ All activities are being logged in terminal.
                 // Check if it's AI tool manually requested
                 if (parsed.tools[0] === 'pentestgpt') {
                     await ctx.reply(`🤖 **PENTESTGPT - USER REQUEST**\n\n🎯 Target: ${target}\n⚡ Starting AI penetration testing...`);
-                    const aiResult = await executePentestGPT(target, ctx, operationId);
+                    // const aiResult = await executePentestGPT(target, ctx, operationId); // Disabled for now
                     results.push(aiResult);
                     toolsToUse = []; // Skip regular execution
                 } else if (parsed.tools[0] === 'hexstrike') {
