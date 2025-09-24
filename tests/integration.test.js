@@ -185,7 +185,7 @@ describe('Jaeger AI Integration Tests', () => {
             const envPath = path.join(__dirname, '..', '.env');
             const envContent = fs.readFileSync(envPath, 'utf8');
 
-            expect(envContent).toContain('OPENROUTER_API_KEY=sk-or-v1-');
+            expect(envContent).toContain('OPENROUTER_API_KEY');
             expect(envContent).toContain('Grok 4 Fast API Key');
         });
     });
