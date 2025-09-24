@@ -89,12 +89,12 @@ const apiKeyStatus = {
     grok: {
         key: process.env.OPENROUTER_API_KEY,
         name: 'Grok 4 Fast',
-        model: 'x-ai/grok-beta',
+        model: 'x-ai/grok-4-fast:free',
         working: true
     }
 };
 ```
-- **Provider**: OpenRouter (x-ai/grok-beta)
+- **Provider**: OpenRouter (x-ai/grok-4-fast:free)
 - **Capabilities**:
   - Advanced reasoning
   - Code analysis

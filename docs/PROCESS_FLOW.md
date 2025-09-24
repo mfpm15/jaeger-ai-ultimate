@@ -50,7 +50,7 @@ Jaeger AI is an ultimate cybersecurity platform that combines 141+ security tool
 ### 3. API Key Management
 ```
 🔑 API Key Failover System
-├─ Primary: Grok 4 Fast (x-ai/grok-beta)
+├─ Primary: Grok 4 Fast (x-ai/grok-4-fast:free)
 ├─ Secondary: DeepSeek (deepseek/deepseek-chat-v3.1:free)
 └─ Tertiary: Gemini (Primary for basic operations)
 ```

@@ -129,7 +129,7 @@ describe('Jaeger AI Integration Tests', () => {
 
             expect(content).toContain('grok');
             expect(content).toContain('Grok 4 Fast');
-            expect(content).toContain('x-ai/grok-beta');
+            expect(content).toContain('x-ai/grok-4-fast:free');
             expect(content).not.toContain('sonoma-sky-alpha');
         });
 
