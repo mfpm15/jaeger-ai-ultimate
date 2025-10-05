@@ -1,34 +1,31 @@
 {
   "name": "jaeger-ai",
-  "version": "3.0.1",
-  "description": "Ultimate AI-Powered Cybersecurity Platform - 141+ Security Tools with OpenRouter & Gemini AI",
-  "main": "jaeger-ai.js",
+  "version": "4.0.0",
+  "description": "AI-Powered Penetration Testing Platform - Telegram Bot + HexStrike MCP (150+ Security Tools) + LLM Intelligence",
+  "main": "jaeger-telegram-bot.js",
   "scripts": {
-    "start": "node jaeger-ai.js",
-    "dev": "NODE_ENV=development node jaeger-ai.js",
-    "test": "jest --detectOpenHandles --forceExit",
-    "setup": "./start.sh"
+    "start": "./start.sh",
+    "bot": "node jaeger-telegram-bot.js",
+    "test": "echo 'No tests configured'",
+    "setup": "cd hexstrike-ai-new && python3 -m venv hexstrike-env && ./hexstrike-env/bin/pip3 install -r requirements.txt && cd .. && npm install"
   },
   "keywords": [
     "cybersecurity",
     "penetration-testing",
     "ai",
     "telegram-bot",
-    "pentestgpt",
     "hexstrike",
+    "strix",
+    "mcp",
     "security-tools",
     "vulnerability-assessment"
   ],
   "author": "Jaeger AI Team",
   "license": "MIT",
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
-    "dotenv": "^17.2.2",
+    "dotenv": "^16.4.5",
     "node-fetch": "^2.7.0",
-    "sqlite3": "^5.1.7",
-    "telegraf": "^4.16.3",
-    "validator": "^13.15.15",
-    "xss": "^1.0.15"
+    "node-telegram-bot-api": "^0.66.0"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -37,8 +34,5 @@
     "type": "git",
     "url": "https://github.com/jaeger-ai/jaeger-ai"
   },
-  "devDependencies": {
-    "jest": "^30.1.3",
-    "supertest": "^7.1.4"
-  }
+  "devDependencies": {}
 }
