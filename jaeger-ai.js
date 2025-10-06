@@ -1551,46 +1551,6 @@ async function executeHexStrike(target, ctx, operationId, options = {}) {
 
         await ctx.reply(formatMessage(summaryMessage));
 
-        if (toolRuns.length) {
-            const toolLines = toolRuns.slice(0, 6).map(tool => {
-                const statusIcon = tool.success ? '✅' : tool.status === 'skipped' ? '⏭️' : '⚠️';
-                const vulnInfo = tool.vulnerabilities_found ? ` (${tool.vulnerabilities_found} indicators)` : '';
-                return `${statusIcon} ${tool.tool}${vulnInfo}`;
-            });
-
-            if (toolRuns.length > 6) {
-                toolLines.push(`… ${toolRuns.length - 6} tools lainnya`);
-            }
-
-            await ctx.reply(formatMessage(`🔎 Tool outcomes:\n${toolLines.join('\n')}`));
-        }
-
-        const failedTools = toolRuns.filter(tool => tool.success === false || tool.status === 'error');
-        if (failedTools.length) {
-            const failureLines = ['⚠️ **Tool follow-up required**'];
-
-            failedTools.forEach((tool) => {
-                const name = (tool.tool || tool.name || 'unknown tool').toString();
-                const stderr = (tool.stderr || tool.error || tool.message || '').toString();
-                const lowerStdErr = stderr.toLowerCase();
-
-                if (name.toLowerCase() === 'nuclei' && lowerStdErr.includes('no templates')) {
-                    failureLines.push('🟧 Nuclei membutuhkan template lokal. Jalankan `nuclei -update-templates --update-directory ~/.local/nuclei-templates` pada server HexStrike.');
-                } else if (name.toLowerCase() === 'nuclei' && lowerStdErr.includes('nuclei-ignore')) {
-                    failureLines.push('🟧 Nuclei tidak menemukan `.nuclei-ignore`. Buat dengan `mkdir -p ~/.config/nuclei && touch ~/.config/nuclei/.nuclei-ignore`.');
-                } else if (name.toLowerCase() === 'nikto') {
-                    failureLines.push('🟧 Nikto bermasalah di lingkungan ini. HexStrike akan mengandalkan httpx/ffuf/nuclei sebagai pengganti.');
-                } else {
-                    const snippet = stderr ? `: ${stderr.substring(0, 140).trim()}` : '';
-                    failureLines.push(`🔸 ${name} gagal${snippet ? `${snippet}…` : ''}`);
-                }
-            });
-
-            failureLines.push('', '📌 Perbaiki dependensi/wordlist di server HexStrike lalu jalankan ulang perintah.');
-
-            await ctx.reply(formatMessage(failureLines.join('\n')));
-        }
-
         const combinedOutput = scanResults.combined_output || '';
         if (combinedOutput) {
             const logsDir = path.join(__dirname, 'logs', 'hexstrike');
@@ -1598,23 +1558,9 @@ async function executeHexStrike(target, ctx, operationId, options = {}) {
                 fs.mkdirSync(logsDir, { recursive: true });
                 const logPath = path.join(logsDir, `${operationId || 'hexstrike'}-${Date.now()}.log`);
                 fs.writeFileSync(logPath, combinedOutput, 'utf8');
-                await ctx.reply(formatMessage(`📁 Log lengkap disimpan di server: ${logPath}`));
                 storedLogPath = logPath;
             } catch (logError) {
                 log.error(`Failed to write HexStrike log: ${logError.message}`);
-            }
-
-            const previewChunks = chunkMessage(combinedOutput);
-            if (previewChunks.length) {
-                await ctx.reply('📄 HexStrike output snippet:');
-                previewChunks.slice(0, 3).forEach(async (chunk, index) => {
-                    const message = `📋 Bagian ${index + 1}/${Math.min(previewChunks.length, 3)}\n\n${formatMessage(chunk)}`;
-                    await ctx.reply(message);
-                });
-
-                if (previewChunks.length > 3) {
-                    await ctx.reply(formatMessage('… Output tambahan tersedia pada log lengkap.'));
-                }
             }
         }
 
@@ -1935,8 +1881,13 @@ async function parseNaturalCommand(text) {
         };
     } catch (error) {
         log.error(`❌ AI analysis failed: ${error.message}`);
+        const fallbackDecision = analyzeIntentFallback(text);
         return {
             ...defaultResponse,
+            intent: fallbackDecision.intent || defaultResponse.intent,
+            tools: defaultResponse.tools.length ? defaultResponse.tools : (fallbackDecision.recommendedTools || []),
+            singleTool: defaultResponse.singleTool || Boolean(fallbackDecision.useSingleTool),
+            fullScan: defaultResponse.fullScan || Boolean(fallbackDecision.useFullScan),
             aiRecommendation: `AI analysis failed (${error.message}), using standard approach`,
             aiSummary: 'Using fallback standard scanning approach'
         };
@@ -2481,23 +2432,23 @@ Date: ${new Date(user.suspendDate).toLocaleDateString()}
 });
 
 // Enhanced text handler with advanced NLP
-bot.on('text', async (ctx) => {
-    try {
-        const text = ctx.message.text;
-        const userId = ctx.from.id;
-        const user = ctx.from.username || ctx.from.first_name;
+async function processUserRequest(ctx, rawText) {
+    const text = (rawText || '').trim();
 
-        // Skip commands starting with /
-        if (text.startsWith('/')) {
+    try {
+        if (!text) {
+            await ctx.reply('❌ Perintah tidak boleh kosong.');
             return;
         }
+
+        const userId = ctx.from.id;
+        const user = ctx.from.username || ctx.from.first_name;
 
         // Handle cancel command
         if (text.toLowerCase().includes('cancel') || text.toLowerCase().includes('stop')) {
             if (activeOperations.has(userId)) {
                 const operation = activeOperations.get(userId);
 
-                // Kill any running processes
                 if (operation.processes && operation.processes.length > 0) {
                     operation.processes.forEach(pid => {
                         try {
@@ -2509,30 +2460,27 @@ bot.on('text', async (ctx) => {
                     });
                 }
 
-                // Set cancellation flag
                 operation.cancelled = true;
-
-                // Remove from active operations
                 activeOperations.delete(userId);
 
                 log.info(`🛑 User ${user} cancelled active operation`);
-                return ctx.reply('✅ Operation cancelled successfully! All running processes have been terminated.', mainMenu);
-            } else {
-                return ctx.reply('❌ No active operation to cancel.');
+                await ctx.reply('✅ Operation cancelled successfully! All running processes have been terminated.', mainMenu);
+                return;
             }
+
+            await ctx.reply('❌ No active operation to cancel.');
+            return;
         }
 
-        // Check if user has active operation
         if (activeOperations.has(userId)) {
             log.warn(`⚠️ User ${user} tried to start new operation while one is active`);
-            return ctx.reply('⏳ Please wait, your previous operation is still running...\n\n💡 Type "cancel" to stop the current operation');
+            await ctx.reply('⏳ Please wait, your previous operation is still running...\n\n💡 Type "cancel" to stop the current operation');
+            return;
         }
 
-        // Parse natural language command (ASYNC)
         const parsed = await parseNaturalCommand(text);
         log.ai(`🧠 NLP Parsed - Intent: ${parsed.intent}, Targets: ${(parsed.targets || []).join(',')}, Tools: ${(parsed.tools || []).join(',')}`);
 
-        // Handle tools list queries
         if (isToolsListQuery(text)) {
             await handleToolsListQuery(ctx, text);
             return;
@@ -2558,16 +2506,14 @@ bot.on('text', async (ctx) => {
 
         log.info(`🎯 Starting ${parsed.intent} operation on ${target} for user ${user}`);
 
-        // Mark user as having active operation
         activeOperations.set(userId, {
             type: parsed.intent,
             target: target,
             startTime: new Date(),
-            processes: [], // Track running processes for cancellation
-            cancelled: false // Flag to check if operation was cancelled
+            processes: [],
+            cancelled: false
         });
 
-        // Run operation without await to prevent Telegraf timeout
         performUltimateOperation(ctx, target, parsed).catch(error => {
             log.error(`Ultimate operation failed: ${error.message}`);
             ctx.reply(`❌ Operation failed: ${error.message}`).catch(() => {});
@@ -2578,6 +2524,24 @@ bot.on('text', async (ctx) => {
         activeOperations.delete(ctx.from.id);
         ctx.reply('❌ Error processing message').catch(() => {});
     }
+}
+
+bot.on('text', async (ctx) => {
+    const text = ctx.message.text;
+
+    if (text.startsWith('/')) {
+        return;
+    }
+
+    await processUserRequest(ctx, text);
+});
+
+['recon', 'vulnhunt', 'osint', 'redteam', 'scan'].forEach((command) => {
+    bot.command(command, async (ctx) => {
+        const args = ctx.message.text.replace(/^\/\w+/, '').trim();
+        const normalized = args ? `${command} ${args}` : command;
+        await processUserRequest(ctx, normalized);
+    });
 });
 
 // Ultimate operation executor
@@ -2789,17 +2753,10 @@ async function performUltimateOperation(ctx, target, parsed) {
             closingLines.push('', 'ℹ️ Saat ini HexStrike berjalan dalam mode simulasi. Instal dependensi tool (mis. nuclei templates, wordlists) di server MCP untuk hasil eksekusi nyata.');
         }
 
-        if (hexResult.metadata?.logPath) {
-            closingLines.push('', `📁 Log lengkap: ${hexResult.metadata.logPath}`);
-        }
-
+        closingLines.push('', '📁 Detail eksekusi tersimpan aman di server untuk audit internal.');
         closingLines.push('', '🔐 Gunakan hanya untuk pengujian yang telah diotorisasi.');
 
         await ctx.reply(formatMessage(closingLines.join('\n')));
-
-        if (!hexResult.simulation && hexResult.metadata?.tools?.length) {
-            await ctx.reply('📂 Ringkasan detail setiap tool tersedia di log HexStrike. Gunakan `/status` untuk memantau konektivitas HexStrike & LLM.');
-        }
 
         const userData = userManager.getUser(userId);
         if (userData) {
