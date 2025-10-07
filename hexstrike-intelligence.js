@@ -26,6 +26,41 @@ class HexStrikeIntelligence {
     }
 
     /**
+     * Normalize user-provided target into a domain/IP acceptable by HexStrike API
+     */
+    static normalizeTarget(input) {
+        if (!input) {
+            return '';
+        }
+
+        const value = String(input).trim();
+        if (!value) {
+            return '';
+        }
+
+        const ipMatch = value.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+        if (ipMatch) {
+            return ipMatch[0];
+        }
+
+        const domainMatch = value.match(/(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}/i);
+        if (domainMatch) {
+            return domainMatch[0].toLowerCase();
+        }
+
+        // Handle domain-like strings and strip protocol/path
+        try {
+            const url = new URL(value.includes('://') ? value : `http://${value}`);
+            return url.hostname || value;
+        } catch (_) {
+            return value
+                .replace(/^(?:https?:\/\/)?(?:www\.)?/i, '')
+                .split(/[\s/]/)[0]
+                .trim();
+        }
+    }
+
+    /**
      * Check HexStrike server health
      */
     async checkHealth() {
@@ -57,7 +92,17 @@ class HexStrikeIntelligence {
      * Analyze target using HexStrike Intelligence
      */
     async analyzeTarget(target, analysisType = 'quick') {
-        console.log(`🎯 Analyzing target: ${target} (${analysisType})`);
+        const normalizedTarget = HexStrikeIntelligence.normalizeTarget(target);
+
+        if (!normalizedTarget) {
+            console.error('❌ Target analysis error: Target domain is missing');
+            return {
+                success: false,
+                error: 'Target domain is missing'
+            };
+        }
+
+        console.log(`🎯 Analyzing target: ${normalizedTarget} (${analysisType})`);
 
         try {
             const response = await fetch(`${this.baseUrl}/api/intelligence/analyze-target`, {
@@ -66,7 +111,7 @@ class HexStrikeIntelligence {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    target: target,
+                    target: normalizedTarget,
                     analysis_type: analysisType
                 }),
                 timeout: 30000 // 30 seconds for analysis
@@ -98,7 +143,18 @@ class HexStrikeIntelligence {
      * Auto-select tools using HexStrike Intelligence
      */
     async selectTools(target, objective = 'comprehensive') {
-        console.log(`🔧 Selecting tools for ${target} (objective: ${objective})`);
+        const normalizedTarget = HexStrikeIntelligence.normalizeTarget(target);
+
+        if (!normalizedTarget) {
+            console.error('❌ Tool selection error: Target domain is missing');
+            return {
+                success: false,
+                error: 'Target domain is missing',
+                tools: []
+            };
+        }
+
+        console.log(`🔧 Selecting tools for ${normalizedTarget} (objective: ${objective})`);
 
         try {
             const response = await fetch(`${this.baseUrl}/api/intelligence/select-tools`, {
@@ -107,7 +163,7 @@ class HexStrikeIntelligence {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    target: target,
+                    target: normalizedTarget,
                     objective: objective
                 }),
                 timeout: 15000
@@ -142,7 +198,17 @@ class HexStrikeIntelligence {
      * This is the MAIN method - uses AI to analyze, select tools, and execute
      */
     async smartScan(target, objective = 'comprehensive', options = {}) {
-        console.log(`🚀 Starting smart scan: ${target}`);
+        const normalizedTarget = HexStrikeIntelligence.normalizeTarget(target);
+
+        if (!normalizedTarget) {
+            console.error('❌ Smart scan error: Target domain is missing');
+            return {
+                success: false,
+                error: 'Target domain is missing'
+            };
+        }
+
+        console.log(`🚀 Starting smart scan: ${normalizedTarget}`);
         console.log(`   Objective: ${objective}`);
         console.log(`   Options:`, options);
 
@@ -153,7 +219,7 @@ class HexStrikeIntelligence {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    target: target,
+                    target: normalizedTarget,
                     objective: objective,
                     ...options
                 }),
@@ -166,17 +232,28 @@ class HexStrikeIntelligence {
             }
 
             const data = await response.json();
+            const scanResults = data.scan_results || {};
+            const toolsExecuted = Array.isArray(scanResults.tools_executed) ? scanResults.tools_executed : [];
+            const summary = scanResults.execution_summary || {};
+
             console.log(`✅ Smart scan completed!`);
-            console.log(`   Tools executed: ${data.tools_executed ? data.tools_executed.length : 0}`);
-            console.log(`   Duration: ${data.execution_time || 'unknown'}`);
+            console.log(`   Tools executed: ${toolsExecuted.length}`);
+            console.log(`   Duration: ${summary.total_execution_time || 'unknown'}s`);
 
             return {
-                success: true,
-                profile: data.target_profile,
-                tools_executed: data.tools_executed,
-                results: data.results,
-                execution_time: data.execution_time,
-                timestamp: data.timestamp
+                success: data.success !== false,
+                target: scanResults.target || normalizedTarget,
+                profile: scanResults.target_profile,
+                execution_summary: summary,
+                tools_executed: toolsExecuted,
+                combined_output: scanResults.combined_output || '',
+                total_vulnerabilities: scanResults.total_vulnerabilities || 0,
+                execution_time: summary.total_execution_time,
+                selected_tools: Array.isArray(summary.tools_used)
+                    ? summary.tools_used
+                    : toolsExecuted.map((tool) => tool.tool).filter(Boolean),
+                timestamp: data.timestamp,
+                raw: data
             };
         } catch (error) {
             console.error(`❌ Smart scan error: ${error.message}`);
@@ -194,13 +271,18 @@ class HexStrikeIntelligence {
         console.log(`🔍 Starting reconnaissance workflow: ${target}`);
 
         try {
+            const domain = HexStrikeIntelligence.normalizeTarget(target);
+            if (!domain) {
+                throw new Error('Target domain is missing');
+            }
+
             const response = await fetch(`${this.baseUrl}/api/bugbounty/reconnaissance-workflow`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    target: target,
+                    domain: domain,
                     depth: depth // quick, standard, deep
                 }),
                 timeout: this.timeout
@@ -234,13 +316,18 @@ class HexStrikeIntelligence {
         console.log(`🎯 Starting vulnerability hunting: ${target}`);
 
         try {
+            const domain = HexStrikeIntelligence.normalizeTarget(target);
+            if (!domain) {
+                throw new Error('Target domain is missing');
+            }
+
             const response = await fetch(`${this.baseUrl}/api/bugbounty/vulnerability-hunting-workflow`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    target: target,
+                    domain: domain,
                     focus: focus // all, web, network, api
                 }),
                 timeout: this.timeout
@@ -274,13 +361,18 @@ class HexStrikeIntelligence {
         console.log(`🕵️ Starting OSINT workflow: ${target}`);
 
         try {
+            const domain = HexStrikeIntelligence.normalizeTarget(target);
+            if (!domain) {
+                throw new Error('Target domain is missing');
+            }
+
             const response = await fetch(`${this.baseUrl}/api/bugbounty/osint-workflow`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    target: target
+                    domain: domain
                 }),
                 timeout: this.timeout
             });
@@ -310,7 +402,17 @@ class HexStrikeIntelligence {
      * Detect technologies on target
      */
     async detectTechnology(target) {
-        console.log(`🔬 Detecting technologies: ${target}`);
+        const normalizedTarget = HexStrikeIntelligence.normalizeTarget(target);
+
+        if (!normalizedTarget) {
+            console.error('❌ Technology detection error: Target domain is missing');
+            return {
+                success: false,
+                error: 'Target domain is missing'
+            };
+        }
+
+        console.log(`🔬 Detecting technologies: ${normalizedTarget}`);
 
         try {
             const response = await fetch(`${this.baseUrl}/api/intelligence/technology-detection`, {
@@ -319,9 +421,9 @@ class HexStrikeIntelligence {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    target: target
+                    target: normalizedTarget
                 }),
-                timeout: 60000 // 1 minute
+                timeout: this.timeout
             });
 
             if (!response.ok) {
@@ -349,7 +451,17 @@ class HexStrikeIntelligence {
      * Execute single tool with optimized parameters
      */
     async executeSingleTool(toolName, target) {
-        console.log(`⚡ Executing single tool: ${toolName} on ${target}`);
+        const normalizedTarget = HexStrikeIntelligence.normalizeTarget(target);
+
+        if (!normalizedTarget) {
+            console.error('❌ Single tool execution error: Target domain is missing');
+            return {
+                success: false,
+                error: 'Target domain is missing'
+            };
+        }
+
+        console.log(`⚡ Executing single tool: ${toolName} on ${normalizedTarget}`);
 
         try {
             // First optimize parameters
@@ -360,12 +472,12 @@ class HexStrikeIntelligence {
                 },
                 body: JSON.stringify({
                     tool: toolName,
-                    target: target
+                    target: normalizedTarget
                 }),
-                timeout: 5000
+                timeout: Math.min(this.timeout, 60000)
             });
 
-            let command = `${toolName} ${target}`;
+            let command = `${toolName} ${normalizedTarget}`;
             if (optimizeResponse.ok) {
                 const optimizeData = await optimizeResponse.json();
                 if (optimizeData.optimized_command) {
