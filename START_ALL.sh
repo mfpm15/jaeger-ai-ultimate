@@ -127,6 +127,14 @@ echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${CYAN}🌐 [3/3] Starting Web Interface...${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# Check if port 8080 is already in use
+if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    echo -e "${YELLOW}   ⚠️  Port 8080 is already in use. Stopping existing process...${NC}"
+    pkill -f "php.*8080" 2>/dev/null || true
+    sleep 1
+fi
+
 cd web-interface
 php -S localhost:8080 > ../web-server.log 2>&1 &
 WEB_PID=$!
@@ -140,6 +148,7 @@ if ps -p $WEB_PID > /dev/null; then
 else
     echo -e "${RED}   ❌ Web Interface failed to start!${NC}"
     echo -e "${YELLOW}   Check web-server.log for details${NC}"
+    tail -5 web-server.log
 fi
 echo ""
 
@@ -164,6 +173,16 @@ if [ $TELEGRAM_PID -ne 0 ]; then
     echo -e "   ${GREEN}•${NC} Telegram: ${CYAN}Send /start to your bot${NC}"
 fi
 echo ""
+echo -e "${CYAN}📋 Logs (Live Tail):${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo -e "${YELLOW}Press Ctrl+C to stop all services and exit${NC}"
+echo ""
+echo -e "${GREEN}Starting live log monitoring...${NC}"
+sleep 2
+
+# Tail logs in real-time
+tail -f jaeger-mcp.log telegram-bot.log web-server.log 2>/dev/null
 echo -e "${CYAN}📝 Logs:${NC}"
 echo -e "   ${GREEN}•${NC} MCP:      ${CYAN}tail -f jaeger-mcp.log${NC}"
 if [ $TELEGRAM_PID -ne 0 ]; then
