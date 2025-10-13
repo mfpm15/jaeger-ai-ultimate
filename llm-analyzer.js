@@ -35,7 +35,7 @@ class LLMAnalyzer {
             ? config.providerPriority
             : ['openrouter', 'gemini', 'deepseek', 'chimera', 'zai'];
 
-        this.maxTokens = Number(config.maxTokens || process.env.LLM_MAX_TOKENS) || 8000;
+        this.maxTokens = Number(config.maxTokens || process.env.LLM_MAX_TOKENS) || 4000; // Reduced from 8000
 
         // API Endpoints
         this.openrouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
@@ -53,34 +53,45 @@ class LLMAnalyzer {
         }
         this.model = config.model || 'deepseek/deepseek-chat'; // Default model for OpenRouter
 
+        // Response cache to reduce API calls (cache for 5 minutes)
+        this.responseCache = new Map();
+        this.CACHE_TTL = 300000; // 5 minutes
+
+        // Token usage tracking
+        this.totalTokensUsed = 0;
+        this.apiCallCount = 0;
+
         console.log(`🔑 Loaded ${this.apiKeys.length} OpenRouter API keys for fallback`);
+        console.log(`⚙️  Max tokens per request: ${this.maxTokens} (optimized for cost)`);
     }
 
     /**
-     * Analyze user request to extract security testing intent
+     * Analyze user request to extract security testing intent (with caching)
      */
     async analyzeUserRequest(userMessage) {
         console.log(`🧠 LLM analyzing user request: "${userMessage}"`);
 
-        const prompt = `You are a cybersecurity expert assistant. Analyze the user's request and extract:
-1. Target (domain/IP/URL)
-2. Scan objective (reconnaissance, vulnerability_hunting, comprehensive, quick, stealth, osint, etc.)
-3. Specific tools requested (if any)
-4. Analysis type preference
+        // Check cache first
+        const cacheKey = `request_${userMessage}`;
+        const cached = this.getCached(cacheKey);
+        if (cached) {
+            console.log('✅ Using cached analysis (saved API call)');
+            return cached;
+        }
 
-User request: "${userMessage}"
-
-Respond ONLY with JSON in this exact format:
+        // Optimized prompt - shorter but effective
+        const prompt = `Extract from: "${userMessage}"
+Return JSON:
 {
-    "target": "extracted target URL/domain/IP",
-    "objective": "reconnaissance|vulnerability_hunting|comprehensive|quick|stealth|osint",
-    "specific_tools": ["tool1", "tool2"] or [],
-    "analysis_type": "quick|comprehensive|stealth",
-    "user_intent": "brief description of what user wants"
+  "target": "domain/IP",
+  "objective": "reconnaissance|vulnerability_hunting|comprehensive|quick|osint",
+  "specific_tools": [],
+  "analysis_type": "quick|comprehensive",
+  "user_intent": "brief desc"
 }`;
 
         try {
-            const result = await this.callLLM(prompt);
+            const result = await this.callLLM(prompt, null, 500); // Limit to 500 tokens max
 
             // Parse JSON response
             const jsonMatch = result.match(/\{[\s\S]*\}/);
@@ -92,6 +103,9 @@ Respond ONLY with JSON in this exact format:
             const analysis = JSON.parse(jsonMatch[0]);
             console.log('✅ LLM Analysis:', JSON.stringify(analysis, null, 2));
 
+            // Cache the result
+            this.setCached(cacheKey, analysis);
+
             return analysis;
         } catch (error) {
             console.error('❌ LLM analysis failed:', error.message);
@@ -100,29 +114,42 @@ Respond ONLY with JSON in this exact format:
     }
 
     /**
-     * Analyze scan results and create user-friendly report
+     * Analyze scan results and create user-friendly report (optimized for token usage)
      */
     async analyzeScanResults(scanResults, target) {
         console.log(`🧠 LLM analyzing scan results for ${target}...`);
 
-        const prompt = `You are a senior penetration tester writing an in-depth Telegram update.
+        // Check cache first
+        const cacheKey = `report_${target}_${JSON.stringify(scanResults).substring(0, 100)}`;
+        const cached = this.getCached(cacheKey);
+        if (cached) {
+            console.log('✅ Using cached report (saved API call)');
+            return cached;
+        }
 
-Target: ${target}
-Scan Data:
-${JSON.stringify(scanResults, null, 2)}
+        // Truncate large scan data to save tokens
+        const compactData = this.compactScanData(scanResults);
 
-Tulis dalam bahasa Indonesia, panjang minimal 600 kata (sekitar 3500-4000 karakter), dengan format berikut:
-1. 🚀 *Executive Summary* — 3 paragraf ringkas yang menjelaskan status keamanan, risiko utama, dan dampak bisnis.
-2. 🔎 *Temuan Penting* — Bullet list dengan urutan HIGH → MEDIUM → LOW. Sertakan port/path/bukti singkat per poin.
-3. 🛠️ *Analisis Tool* — Jelaskan hasil tiap tool utama (NMAP, NIKTO, SQLMAP, FFUF, dll.), termasuk apa yang dicek, durasi, dan insight yang muncul.
-4. ✅ *Rencana Tindak Lanjut* — Minimal 5 rekomendasi prioritas, jelaskan alasan dan pihak yang perlu mengambil tindakan.
-5. 📈 *Risiko & Kontinjensi* — Ringkas kemungkinan ancaman lanjutan dan langkah mitigasi cepat jika serangan terjadi.
+        // Optimized prompt - more concise
+        const prompt = `Target: ${target}
+Data: ${JSON.stringify(compactData)}
 
-Gunakan bullet dan paragraf yang jelas, hindari tabel panjang, sertakan emoji pada heading, jangan ulangi data mentah mentahan, dan tutup dengan kalimat yang mendorong aksi selanjutnya.`;
+Tulis laporan dalam Bahasa Indonesia (min 400 kata):
+1. 🚀 *Executive Summary* — Status keamanan, risiko utama, dampak bisnis
+2. 🔎 *Temuan* — HIGH/MEDIUM/LOW findings dengan bukti
+3. 🛠️ *Tool Results* — Highlight per tool
+4. ✅ *Rekomendasi* — 5 prioritas action items
+5. 📈 *Mitigasi Risiko* — Langkah cepat jika ada serangan
+
+Gunakan emoji, bullet, paragraf jelas. No tables.`;
 
         try {
             const report = await this.callLLM(prompt);
             console.log('✅ LLM Report generated');
+
+            // Cache the report
+            this.setCached(cacheKey, report);
+
             return report;
         } catch (error) {
             console.error('❌ LLM report generation failed:', error.message);
@@ -131,9 +158,65 @@ Gunakan bullet dan paragraf yang jelas, hindari tabel panjang, sertakan emoji pa
     }
 
     /**
-     * Call LLM API (using primary LLM)
+     * Compact scan data to reduce token usage
      */
-    async callLLM(prompt, model = null) {
+    compactScanData(scanResults) {
+        const compact = {
+            target: scanResults.target,
+            total_vulnerabilities: scanResults.total_vulnerabilities,
+            tools: []
+        };
+
+        if (Array.isArray(scanResults.tools)) {
+            compact.tools = scanResults.tools.slice(0, 8).map(tool => ({
+                tool: tool.tool,
+                success: tool.success,
+                highlights: tool.highlights ? tool.highlights.substring(0, 300) : '',
+                vulnerabilities_found: tool.vulnerabilities_found
+            }));
+        }
+
+        return compact;
+    }
+
+    /**
+     * Cache management
+     */
+    getCached(key) {
+        const cached = this.responseCache.get(key);
+        if (!cached) return null;
+
+        const now = Date.now();
+        if (now - cached.timestamp > this.CACHE_TTL) {
+            this.responseCache.delete(key);
+            return null;
+        }
+
+        return cached.value;
+    }
+
+    setCached(key, value) {
+        this.responseCache.set(key, {
+            value,
+            timestamp: Date.now()
+        });
+
+        // Cleanup old cache entries
+        if (this.responseCache.size > 50) {
+            const oldestKey = this.responseCache.keys().next().value;
+            this.responseCache.delete(oldestKey);
+        }
+    }
+
+    /**
+     * Call LLM API (using primary LLM) with token tracking
+     */
+    async callLLM(prompt, model = null, maxTokens = null) {
+        this.apiCallCount++;
+        const effectiveMaxTokens = maxTokens || this.maxTokens;
+
+        console.log(`📊 API Call #${this.apiCallCount} | Max tokens: ${effectiveMaxTokens}`);
+
         const providers = this.resolveProviders();
 
         if (providers.length === 0) {
@@ -144,20 +227,33 @@ Gunakan bullet dan paragraf yang jelas, hindari tabel panjang, sertakan emoji pa
 
         for (const provider of providers) {
             try {
+                let result;
                 switch (provider) {
                     case 'openrouter':
-                        return await this.callOpenRouter(prompt, model);
+                        result = await this.callOpenRouter(prompt, model, effectiveMaxTokens);
+                        break;
                     case 'gemini':
-                        return await this.callGemini(prompt, model);
+                        result = await this.callGemini(prompt, model);
+                        break;
                     case 'deepseek':
-                        return await this.callDeepSeek(prompt);
+                        result = await this.callDeepSeek(prompt);
+                        break;
                     case 'chimera':
-                        return await this.callChimera(prompt);
+                        result = await this.callChimera(prompt);
+                        break;
                     case 'zai':
-                        return await this.callZAI(prompt);
+                        result = await this.callZAI(prompt);
+                        break;
                     default:
                         continue;
                 }
+
+                // Track token usage (approximate)
+                const estimatedTokens = Math.ceil((prompt.length + (result?.length || 0)) / 4);
+                this.totalTokensUsed += estimatedTokens;
+                console.log(`📊 Estimated tokens used: ${estimatedTokens} | Total: ${this.totalTokensUsed}`);
+
+                return result;
             } catch (error) {
                 lastError = error;
                 console.error(`❌ ${provider} provider failed: ${error.message}`);
@@ -209,14 +305,15 @@ Gunakan bullet dan paragraf yang jelas, hindari tabel panjang, sertakan emoji pa
     }
 
     /**
-     * OpenRouter API call (supports multiple models with automatic retry on different keys)
+     * OpenRouter API call (optimized with shorter system prompt and configurable max tokens)
      */
-    async callOpenRouter(prompt, model = null) {
+    async callOpenRouter(prompt, model = null, maxTokens = null) {
         if (this.apiKeys.length === 0) {
             throw new Error('OpenRouter API key not configured');
         }
 
         const selectedModel = model || this.model;
+        const effectiveMaxTokens = maxTokens || this.maxTokens;
         let lastError = null;
 
         // Try all available API keys
@@ -240,15 +337,15 @@ Gunakan bullet dan paragraf yang jelas, hindari tabel panjang, sertakan emoji pa
                         messages: [
                             {
                                 role: 'system',
-                                content: 'You are a cybersecurity expert assistant for penetration testing and security analysis.'
+                                content: 'Cybersecurity expert for pentest analysis.' // Shortened system prompt
                             },
                             {
                                 role: 'user',
                                 content: prompt
                             }
                         ],
-                        temperature: 0.7,
-                        max_tokens: this.maxTokens
+                        temperature: 0.5, // Reduced from 0.7 for more consistent outputs
+                        max_tokens: effectiveMaxTokens
                     })
                 });
 
@@ -269,6 +366,11 @@ Gunakan bullet dan paragraf yang jelas, hindari tabel panjang, sertakan emoji pa
 
                 const data = await response.json();
                 console.log(`✅ API key #${keyIndex + 1} succeeded!`);
+
+                // Log token usage if available
+                if (data.usage) {
+                    console.log(`📊 Tokens used: ${data.usage.total_tokens} (prompt: ${data.usage.prompt_tokens}, completion: ${data.usage.completion_tokens})`);
+                }
 
                 // Update current key index for next call
                 this.currentKeyIndex = keyIndex;

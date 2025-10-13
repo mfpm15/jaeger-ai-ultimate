@@ -1,20 +1,20 @@
 {
   "name": "jaeger-ai",
   "version": "4.0.0",
-  "description": "AI-Powered Penetration Testing Platform - Telegram Bot + HexStrike MCP (150+ Security Tools) + LLM Intelligence",
+  "description": "AI-Powered Penetration Testing Platform - Telegram Bot + Jaeger MCP (150+ Security Tools) + LLM Intelligence",
   "main": "jaeger-telegram-bot.js",
   "scripts": {
     "start": "./start.sh",
     "bot": "node jaeger-telegram-bot.js",
     "test": "echo 'No tests configured'",
-    "setup": "cd hexstrike-ai-new && python3 -m venv hexstrike-env && ./hexstrike-env/bin/pip3 install -r requirements.txt && cd .. && npm install"
+    "setup": "cd jaeger-ai-new && python3 -m venv jaeger-env && ./jaeger-env/bin/pip3 install -r requirements.txt && cd .. && npm install"
   },
   "keywords": [
     "cybersecurity",
     "penetration-testing",
     "ai",
     "telegram-bot",
-    "hexstrike",
+    "jaeger",
     "strix",
     "mcp",
     "security-tools",

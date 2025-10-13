@@ -1,8 +1,11 @@
 # JAEGER AI v4.0 - Intelligent Penetration Testing Platform
 
-**AI-Powered Security Testing via Telegram Bot**
+**AI-Powered Security Testing via Telegram Bot & Web Interface**
 
-Jaeger AI adalah platform penetration testing berbasis AI yang mengintegrasikan HexStrike MCP (150+ security tools) dengan LLM intelligence (DeepSeek, Chimera, Z AI) melalui interface Telegram Bot.
+Jaeger AI adalah platform penetration testing berbasis AI yang mengintegrasikan Jaeger MCP (150+ security tools) dengan LLM intelligence (DeepSeek, Chimera, Z AI) melalui **2 interface alternatif**:
+
+- 🤖 **Telegram Bot** - Mobile-friendly, group collaboration
+- 🌐 **Web Interface** (NEW!) - Desktop-friendly, Claude-like UI (PHP Native)
 
 ---
 
@@ -26,7 +29,7 @@ Jaeger AI adalah platform penetration testing berbasis AI yang mengintegrasikan 
                 ▼                              ▼
 ┌───────────────────────────┐   ┌─────────────────────────────────┐
 │    LLM ANALYZER           │   │  HEXSTRIKE INTELLIGENCE BRIDGE  │
-│   (llm-analyzer.js)       │◄──┤  (hexstrike-intelligence.js)    │
+│   (llm-analyzer.js)       │◄──┤  (jaeger-intelligence.js)    │
 │                           │   │                                 │
 │  • Request Analysis       │   │  • API Communication            │
 │  • Result Processing      │   │  • Workflow Management          │
@@ -36,7 +39,7 @@ Jaeger AI adalah platform penetration testing berbasis AI yang mengintegrasikan 
                                            ▼
                          ┌─────────────────────────────────────────┐
                          │   HEXSTRIKE MCP SERVER (Python)         │
-                         │   (hexstrike_server.py + hexstrike_mcp) │
+                         │   (jaeger_server.py + jaeger_mcp) │
                          │                                         │
                          │  • 150+ Security Tools Database         │
                          │  • Intelligent Tool Selection           │
@@ -69,11 +72,20 @@ Jaeger AI adalah platform penetration testing berbasis AI yang mengintegrasikan 
 
 ## 🚀 Core Components
 
-### 1. **Telegram Bot Interface** (`jaeger-telegram-bot.js`)
-- User interaction via Telegram
+### 1. **Interface Layer** (Choose one or both!)
+
+#### A. Telegram Bot (`jaeger-telegram-bot.js`)
+- Mobile-friendly interface
 - Natural language command processing
-- Real-time status updates
-- Result delivery
+- Real-time status updates via Telegram
+- Group collaboration support
+
+#### B. Web Interface (NEW! `web-interface/`)
+- Claude-like UI design (PHP Native)
+- Desktop-optimized experience
+- Real-time chat interface
+- No Telegram account needed
+- **Quick Start**: `cd web-interface && php -S localhost:8080`
 
 ### 2. **LLM Analyzer** (`llm-analyzer.js`)
 - Multi-LLM support (DeepSeek, Chimera, Z AI)
@@ -81,13 +93,13 @@ Jaeger AI adalah platform penetration testing berbasis AI yang mengintegrasikan 
 - Scan result analysis
 - Intelligent report generation
 
-### 3. **HexStrike Intelligence Bridge** (`hexstrike-intelligence.js`)
-- RESTful API communication to HexStrike MCP
+### 3. **Jaeger Intelligence Bridge** (`jaeger-intelligence.js`)
+- RESTful API communication to Jaeger MCP
 - Workflow orchestration (Recon, Vuln Hunting, OSINT)
 - Smart scan execution
 - Result aggregation
 
-### 4. **HexStrike MCP Server** (`hexstrike-ai-new/`)
+### 4. **Jaeger MCP Server** (`jaeger-ai-core/`)
 - 150+ security tools integration
 - Multi-agent AI decision engine
 - Autonomous tool selection
@@ -131,22 +143,28 @@ Jaeger AI adalah platform penetration testing berbasis AI yang mengintegrasikan 
 
 ### Setup Steps
 
-1. **Clone Repository**
+> **Catatan**: Repo ini disertakan tanpa `node_modules` dan virtualenv agar arsip kecil. Jalankan langkah berikut untuk memulihkan dependensi sebelum start.
+
+1. **Clone / Extract Repository**
 ```bash
 git clone https://github.com/jaeger-ai/jaeger-ai
 cd jaeger-ai
+# jika menerima arsip bersih: unzip jaeger-ai-clean.zip && cd jaeger-ai
 ```
 
-2. **Install Dependencies**
+2. **Install Dependensi Aplikasi & Tool**
 ```bash
-npm run setup
-```
-Ini akan:
-- Membuat Python virtual environment untuk HexStrike
-- Install Python dependencies
-- Install Node.js dependencies
+npm install                      # dependency Node.js untuk Telegram bot
+./install_jaeger_tools.sh     # pasang CLI security tools (nmap, feroxbuster, katana, nuclei, httpx, wpscan, dll)
 
-3. **Configure Environment**
+# (opsional) buat virtualenv Jaeger jika ingin terisolasi
+python3 -m venv jaeger-ai-core/jaeger-env
+source jaeger-ai-core/jaeger-env/bin/activate
+pip install -r jaeger-ai-core/requirements.txt
+```
+Skrip `install_jaeger_tools.sh` memastikan tool CLI yang dibutuhkan Jaeger tersedia dan otomatis memperbarui template nuclei. Jalankan lagi skrip tersebut bila ada update tool di kemudian hari.
+
+3. **Konfigurasi Environment**
 ```bash
 cp .env.example .env
 nano .env
@@ -172,17 +190,57 @@ npm start
 # atau
 ./start.sh
 ```
+Perintah ini akan menjalankan Jaeger MCP (Python) dan Telegram Bot sekaligus. Setelah bot online, kirim `/status` di Telegram untuk memastikan jumlah tool yang terdeteksi sesuai (biasanya >60).
+
+### Menjalankan Setelah Extract Arsip Bersih
+```bash
+unzip jaeger-ai-clean.zip
+cd jaeger-ai
+npm install
+./install_jaeger_tools.sh
+npm start
+```
+Jika ingin mode development manual, jalankan `node jaeger-telegram-bot.js` setelah Jaeger server aktif.
 
 ---
 
 ## 🎮 Usage
 
-### Telegram Commands
+### Interface Options
+
+JAEGER AI supports **2 interface options**:
+
+#### Option 1: Telegram Bot (Mobile-Friendly)
+```bash
+# Start services
+./start.sh
+
+# Use Telegram bot
+# Send "/start" in Telegram
+```
+
+#### Option 2: Web Interface (Desktop-Friendly) 🆕
+```bash
+# Start Jaeger MCP
+./start.sh
+
+# Start web server (development)
+cd web-interface
+php -S localhost:8080
+
+# Open browser: http://localhost:8080
+```
+
+See [WEB_INTERFACE_GUIDE.md](WEB_INTERFACE_GUIDE.md) for detailed setup.
+
+---
+
+### Telegram Bot Commands
 
 **Basic Commands:**
 - `/start` - Welcome message dan panduan
 - `/help` - Help guide lengkap
-- `/status` - Cek status HexStrike server
+- `/status` - Cek status Jaeger server
 - `/tools` - List available tools
 - `/cancel` - Cancel active scan
 
@@ -199,8 +257,10 @@ npm start
 "vulnerability hunting telkom.co.id"
 "quick scan 192.168.1.1"
 "osint example.com"
-"comprehensive scan with detailed analysis target.com"
+"sqlmap saja ke https://target.com/login.php?id=1"
+"jalankan nmap dan nikto ke contoh.com"
 ```
+Jika user menyebut satu atau beberapa nama tool secara eksplisit (mis. `nmap`, `ffuf`, `sqlmap`), bot akan menjalankan tepat tool tersebut. Tanpa sebutan spesifik, Jaeger akan menjalankan workflow komprehensif (hingga 10 tool untuk mode vuln/comprehensive) dengan status update setiap 60 detik.
 
 ---
 
@@ -213,8 +273,8 @@ User: "recon example.com"
 Flow:
 1. Telegram Bot receives request
 2. LLM analyzes: target=example.com, objective=reconnaissance
-3. HexStrike Intelligence calls /api/bugbounty/reconnaissance-workflow
-4. HexStrike executes:
+3. Jaeger Intelligence calls /api/bugbounty/reconnaissance-workflow
+4. Jaeger executes:
    - subfinder (subdomain discovery)
    - nmap (port scanning)
    - httpx (technology detection)
@@ -229,7 +289,7 @@ User: "find vulnerabilities in example.com"
 
 Flow:
 1. LLM identifies: objective=vulnerability_hunting
-2. HexStrike calls /api/bugbounty/vulnerability-hunting-workflow
+2. Jaeger calls /api/bugbounty/vulnerability-hunting-workflow
 3. Tools executed:
    - nuclei (template-based scanning)
    - nikto (web server vulnerabilities)
@@ -245,16 +305,16 @@ Flow:
 
 ```
 jaeger-ai/
-├── hexstrike-ai-new/              # HexStrike MCP Server (Python)
-│   ├── hexstrike_server.py        # Main MCP server
-│   ├── hexstrike_mcp.py           # MCP implementation
-│   ├── hexstrike-ai-mcp.json      # MCP configuration
+├── jaeger-ai-core/              # Jaeger MCP Server (Python)
+│   ├── jaeger_server.py        # Main MCP server
+│   ├── jaeger_mcp.py           # MCP implementation
+│   ├── jaeger-ai-mcp.json      # MCP configuration
 │   ├── requirements.txt           # Python dependencies
-│   └── hexstrike-env/             # Python virtual environment
+│   └── jaeger-env/             # Python virtual environment
 │
 ├── jaeger-telegram-bot.js         # Main Telegram Bot
 ├── llm-analyzer.js                # LLM Intelligence Layer
-├── hexstrike-intelligence.js      # HexStrike API Bridge
+├── jaeger-intelligence.js      # Jaeger API Bridge
 ├── package.json                   # Node.js config
 ├── start.sh                       # Startup script
 ├── .env                           # Environment variables
@@ -265,7 +325,7 @@ jaeger-ai/
 
 ## 🔧 Configuration
 
-### HexStrike MCP Server
+### Jaeger MCP Server
 Default: `http://127.0.0.1:8888`
 
 API Endpoints:
@@ -295,15 +355,15 @@ Fallback: Direct DeepSeek API, Chimera, Z AI
 
 ## 🐛 Troubleshooting
 
-### HexStrike Server tidak start
+### Jaeger Server tidak start
 ```bash
-cd hexstrike-ai-new
-./hexstrike-env/bin/python3 hexstrike_server.py
+cd jaeger-ai-core
+./jaeger-env/bin/python3 jaeger_server.py
 ```
 
 ### Telegram Bot tidak respond
 1. Cek BOT_TOKEN di .env
-2. Pastikan HexStrike server running: `curl http://127.0.0.1:8888/health`
+2. Pastikan Jaeger server running: `curl http://127.0.0.1:8888/health`
 3. Cek logs
 
 ### LLM tidak bekerja
@@ -340,7 +400,7 @@ MIT License - See LICENSE file
 
 ## 👥 Credits
 
-- **HexStrike AI**: https://github.com/0x4m4/hexstrike-ai
+- **Jaeger AI**: https://github.com/0x4m4/jaeger-ai
 - **LLM Providers**: OpenRouter, DeepSeek, Chimera, Z AI
 - **Security Tools**: Community tools (nmap, nuclei, subfinder, etc.)
 

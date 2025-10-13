@@ -4,32 +4,42 @@
  * JAEGER AI - Telegram Bot for Penetration Testing
  *
  * Grand Design:
- * 1. HexStrike AI (150+ tools, MCP Intelligence Engine) - Core
+ * 1. Jaeger AI (150+ tools, MCP Intelligence Engine) - Core
  * 2. LLM (DeepSeek/Chimera/Z AI) - Analysis & Interface
  * 3. Telegram Bot - User Interface
  *
  * Flow:
- * User Request → Telegram Bot → LLM Analyze Request → HexStrike Intelligence API
+ * User Request → Telegram Bot → LLM Analyze Request → Jaeger Intelligence API
  * → Auto Tool Selection & Execution → LLM Analyze Results → Telegram Bot Response
  */
 
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const HexStrikeIntelligence = require('./hexstrike-intelligence');
+const JaegerIntelligence = require('./jaeger-intelligence');
 const LLMAnalyzer = require('./llm-analyzer');
 
-// Initialize components
+// Initialize components with improved polling and error resilience
 const bot = new TelegramBot(process.env.BOT_TOKEN, {
     polling: {
         autoStart: true,
-        interval: 500,
+        interval: 2000, // Slower polling = more stable (2s)
         params: {
-            timeout: 30,
+            timeout: 30, // Reduced timeout to prevent ECONNRESET
             allowed_updates: ['message', 'callback_query']
         }
-    }
+    },
+    request: {
+        agentOptions: {
+            keepAlive: true,
+            keepAliveMsecs: 10000, // Reduced keep-alive time
+            maxSockets: 1, // Limit concurrent connections
+            maxFreeSockets: 1
+        },
+        timeout: 60000 // 60s timeout for requests
+    },
+    filepath: false // Disable file downloads
 });
-const hexstrike = new HexStrikeIntelligence();
+const jaeger = new JaegerIntelligence();
 const llm = new LLMAnalyzer({
     geminiKey: process.env.GEMINI_API_KEY,
     geminiModel: process.env.GEMINI_MODEL,
@@ -130,8 +140,8 @@ async function performHexstrikeAutomation({ chatId = null, target, objective, sp
     }
 
     const progressUpdates = [
-        'HexStrike masih mengumpulkan data…',
-        'HexStrike menjalankan tool lanjutan, mohon tunggu…',
+        'Jaeger masih mengumpulkan data…',
+        'Jaeger menjalankan tool lanjutan, mohon tunggu…',
         'Analisis AI akan dibuat setelah semua tool selesai…'
     ];
 
@@ -141,7 +151,7 @@ async function performHexstrikeAutomation({ chatId = null, target, objective, sp
 
     if (chatId) {
         try {
-            await bot.sendMessage(chatId, '⚙️ HexStrike automation berjalan. Update status akan dikirimkan setiap 60 detik.');
+            await bot.sendMessage(chatId, '⚙️ Jaeger automation berjalan. Update status akan dikirimkan setiap 60 detik.');
         } catch (error) {
             console.error(`${colors.red}❌ Initial progress message error: ${error.message}${colors.reset}`);
         }
@@ -160,10 +170,10 @@ async function performHexstrikeAutomation({ chatId = null, target, objective, sp
     }
 
     try {
-        const result = await hexstrike.smartScan(target, normalizedObjective, options);
+        const result = await jaeger.smartScan(target, normalizedObjective, options);
         if (chatId) {
             try {
-                await bot.sendMessage(chatId, '✅ HexStrike automation selesai. Menyusun laporan akhir…');
+                await bot.sendMessage(chatId, '✅ Jaeger automation selesai. Menyusun laporan akhir…');
             } catch (error) {
                 console.error(`${colors.red}❌ Completion message error: ${error.message}${colors.reset}`);
             }
@@ -186,7 +196,7 @@ function formatExecutionSummary({ result, target, objective }) {
     const safeObjective = escapeMarkdown(objective || normalizeObjective(objective));
 
     const lines = [
-        '📊 *HexStrike Execution Summary*',
+        '📊 *Jaeger Execution Summary*',
         `🎯 Target  : \`${safeTarget}\``,
         `🧭 Mode    : \`${safeObjective}\``,
         `🛠️ Tools   : ${toolsExecuted.length} total | ✅ ${successfulTools.length}${failedTools > 0 ? ` | ❌ ${failedTools}` : ''}`,
@@ -291,9 +301,9 @@ function formatToolOutput(tool) {
     }
 
     if (failureText.includes('not found') || failureText.includes('command not found')) {
-        lines.push('💡 Tip: Binary tidak ditemukan di server HexStrike. Instal tool ini dan pastikan ada di PATH.');
+        lines.push('💡 Tip: Binary tidak ditemukan di server Jaeger. Instal tool ini dan pastikan ada di PATH.');
     } else if (name === 'NUCLEI' && (tool?.success === false || (error && error.length))) {
-        lines.push('💡 Tip: Pastikan nuclei terinstal dan path binary tersedia di server HexStrike.');
+        lines.push('💡 Tip: Pastikan nuclei terinstal dan path binary tersedia di server Jaeger.');
     }
 
     return lines.join('\n');
@@ -324,7 +334,7 @@ async function sendToolOutputs(chatId, tools = []) {
     }
 
     if (missingTools.size) {
-        await bot.sendMessage(chatId, `⚠️ Tool belum terinstal: ${Array.from(missingTools).join(', ')}. Silakan instal pada server HexStrike agar otomatisasi lengkap.`);
+        await bot.sendMessage(chatId, `⚠️ Tool belum terinstal: ${Array.from(missingTools).join(', ')}. Silakan instal pada server Jaeger agar otomatisasi lengkap.`);
     }
 }
 
@@ -355,7 +365,7 @@ function buildLLMPayload(result, target) {
 
 async function deliverScanOutcome({ chatId, target, objective, result, originalText }) {
     if (!result || result.success === false) {
-        const errorMsg = (result && result.error) || 'Unknown HexStrike error';
+        const errorMsg = (result && result.error) || 'Unknown Jaeger error';
         await bot.sendMessage(chatId, `❌ Scan failed: ${errorMsg}`);
         return;
     }
@@ -393,28 +403,28 @@ async function deliverScanOutcome({ chatId, target, objective, result, originalT
 
 async function ensureHexstrikeHealth(chatId) {
     try {
-        const health = await hexstrike.checkHealth();
+        const health = await jaeger.checkHealth();
         if (!health || health.status !== 'healthy') {
-            await bot.sendMessage(chatId, '❌ HexStrike tidak siap saat ini. Coba restart server MCP lalu jalankan kembali.');
+            await bot.sendMessage(chatId, '❌ Jaeger tidak siap saat ini. Coba restart server MCP lalu jalankan kembali.');
             return null;
         }
 
         const toolCount = health.tools_available || 'N/A';
-        await bot.sendMessage(chatId, `🩺 HexStrike online (tools terdeteksi: ${toolCount}).`);
+        await bot.sendMessage(chatId, `🩺 Jaeger online (tools terdeteksi: ${toolCount}).`);
 
         if (typeof health.tools_available === 'number' && health.tools_available < 40) {
-            await bot.sendMessage(chatId, '⚠️ Beberapa tool HexStrike belum terdeteksi. Jalankan skrip instalasi tambahan bila diperlukan.');
+            await bot.sendMessage(chatId, '⚠️ Beberapa tool Jaeger belum terdeteksi. Jalankan skrip instalasi tambahan bila diperlukan.');
         }
         return health;
     } catch (error) {
-        await bot.sendMessage(chatId, `⚠️ Gagal memeriksa kesehatan HexStrike: ${error.message}`);
+        await bot.sendMessage(chatId, `⚠️ Gagal memeriksa kesehatan Jaeger: ${error.message}`);
         return null;
     }
 }
 
 console.log(`${colors.cyan}╔═══════════════════════════════════════════╗${colors.reset}`);
 console.log(`${colors.cyan}║   JAEGER AI - Penetration Testing Bot    ║${colors.reset}`);
-console.log(`${colors.cyan}║   Powered by HexStrike Intelligence       ║${colors.reset}`);
+console.log(`${colors.cyan}║   Powered by Jaeger Intelligence       ║${colors.reset}`);
 console.log(`${colors.cyan}╚═══════════════════════════════════════════╝${colors.reset}\n`);
 
 // Active scans tracker
@@ -429,7 +439,7 @@ bot.onText(/\/start/, async (msg) => {
     const welcomeMessage = `
 🤖 *Jaeger AI - Penetration Testing Assistant*
 
-Saya adalah bot AI untuk security testing yang menggunakan HexStrike Intelligence Engine (150+ tools).
+Saya adalah bot AI untuk security testing yang menggunakan Jaeger Intelligence Engine (150+ tools).
 
 *🎯 Cara Penggunaan:*
 Kirim perintah natural language, contoh:
@@ -442,7 +452,7 @@ Kirim perintah natural language, contoh:
 *🔧 Commands:*
 /start - Tampilkan pesan ini
 /help - Panduan lengkap
-/status - Status HexStrike server
+/status - Status Jaeger server
 /tools - Daftar tools available
 
 *⚡ Objective Options:*
@@ -510,7 +520,7 @@ Kirim perintah dalam bahasa natural, AI akan memahami intent Anda.
 • /tech <target> - Technology detection
 
 *Utility Commands:*
-• /status - Check HexStrike server status
+• /status - Check Jaeger server status
 • /tools - List available tools
 • /cancel - Cancel active scan
 
@@ -527,18 +537,18 @@ Pertanyaan? Kirim pesan Anda! 💬
 });
 
 /**
- * Status command - Check HexStrike server
+ * Status command - Check Jaeger server
  */
 bot.onText(/\/status/, async (msg) => {
     const chatId = msg.chat.id;
 
-    bot.sendMessage(chatId, '⏳ Checking HexStrike server status...');
+    bot.sendMessage(chatId, '⏳ Checking Jaeger server status...');
 
-    const health = await hexstrike.checkHealth();
+    const health = await jaeger.checkHealth();
 
     if (health.status === 'healthy') {
         const statusMsg = `
-✅ *HexStrike Server Online*
+✅ *Jaeger Server Online*
 
 🔧 Tools Available: ${health.tools_available || 'N/A'}
 ⏱️ Uptime: ${Math.floor((health.uptime || 0) / 3600)}h ${Math.floor(((health.uptime || 0) % 3600) / 60)}m
@@ -548,7 +558,7 @@ Status: *READY* 🚀
 `;
         bot.sendMessage(chatId, statusMsg);
     } else {
-        bot.sendMessage(chatId, `❌ HexStrike server offline!\n\nError: ${health.error}`);
+        bot.sendMessage(chatId, `❌ Jaeger server offline!\n\nError: ${health.error}`);
     }
 });
 
@@ -559,7 +569,7 @@ bot.onText(/\/tools/, async (msg) => {
     const chatId = msg.chat.id;
 
     const toolsMessage = `
-🔧 *HexStrike Available Tools (60+)*
+🔧 *Jaeger Available Tools (60+)*
 
 *Network Scanning:*
 nmap, masscan, rustscan, zmap
@@ -642,7 +652,7 @@ bot.onText(/\/tech (.+)/, async (msg, match) => {
 
     bot.sendMessage(chatId, `🔬 Detecting technologies on ${target}...`);
 
-    const result = await hexstrike.detectTechnology(target);
+    const result = await jaeger.detectTechnology(target);
 
     if (result.success) {
         const techMsg = formatTechnologyResult(result);
@@ -683,11 +693,11 @@ bot.on('message', async (msg) => {
     // Handle keyboard button presses
     if (text === '📊 Status') {
         // Execute status check directly
-        bot.sendMessage(chatId, '⏳ Checking HexStrike server status...');
-        const health = await hexstrike.checkHealth();
+        bot.sendMessage(chatId, '⏳ Checking Jaeger server status...');
+        const health = await jaeger.checkHealth();
         if (health.status === 'healthy') {
             const statusMsg = `
-✅ *HexStrike Server Online*
+✅ *Jaeger Server Online*
 
 🔧 Tools Available: ${health.tools_available || 'N/A'}
 ⏱️ Uptime: ${Math.floor((health.uptime || 0) / 3600)}h ${Math.floor(((health.uptime || 0) % 3600) / 60)}m
@@ -697,13 +707,13 @@ Status: *READY* 🚀
 `;
             bot.sendMessage(chatId, statusMsg, { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, `❌ HexStrike server offline!\n\nError: ${health.error}`);
+            bot.sendMessage(chatId, `❌ Jaeger server offline!\n\nError: ${health.error}`);
         }
         return;
     } else if (text === '🔧 Tools') {
         // Show tools list directly
         const toolsMessage = `
-🔧 *HexStrike Available Tools (60+)*
+🔧 *Jaeger Available Tools (60+)*
 
 *Network Scanning:*
 nmap, masscan, rustscan, zmap
@@ -757,7 +767,7 @@ Kirim perintah dalam bahasa natural, AI akan memahami intent Anda.
 • /tech <target> - Technology detection
 
 *Utility Commands:*
-• /status - Check HexStrike server status
+• /status - Check Jaeger server status
 • /tools - List available tools
 • /cancel - Cancel active scan
 
@@ -846,10 +856,10 @@ Pertanyaan? Kirim pesan Anda! 💬
         }
 
         if (analysis.objective === 'vulnerability_hunting') {
-            await bot.sendMessage(chatId, '🎯 Fokus: vulnerability hunting. HexStrike akan mencoba menjalankan sebanyak mungkin tool terkait (SQLi, dir brute-force, nuclei, dll).');
+            await bot.sendMessage(chatId, '🎯 Fokus: vulnerability hunting. Jaeger akan mencoba menjalankan sebanyak mungkin tool terkait (SQLi, dir brute-force, nuclei, dll).');
         }
 
-        // Step 2: Execute scan using HexStrike Intelligence
+        // Step 2: Execute scan using Jaeger Intelligence
         const scanResult = await performHexstrikeAutomation({
             chatId,
             target: analysis.target,
@@ -958,10 +968,58 @@ function splitMessage(text, maxLength = 4000) {
 }
 
 /**
- * Error handling
+ * Error handling with improved retry mechanism
  */
+let pollingErrorCount = 0;
+const MAX_POLLING_ERRORS = 10; // Increased tolerance
+let lastErrorTime = Date.now();
+
 bot.on('polling_error', (error) => {
-    console.error(`${colors.red}❌ Polling error: ${error.message}${colors.reset}`);
+    const now = Date.now();
+    const timeSinceLastError = now - lastErrorTime;
+
+    // Reset counter if errors are spaced out (successful recovery)
+    if (timeSinceLastError > 60000) { // 1 minute
+        pollingErrorCount = 0;
+    }
+
+    pollingErrorCount++;
+    lastErrorTime = now;
+
+    // Log error with context
+    console.error(`${colors.red}❌ Polling error (${pollingErrorCount}/${MAX_POLLING_ERRORS}): ${error.message}${colors.reset}`);
+
+    // Common network errors - graceful handling
+    if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'EFATAL' ||
+        error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
+
+        console.log(`${colors.yellow}⚠️  Network error (${error.code}), bot will retry in 5s...${colors.reset}`);
+
+        // Only restart if too many consecutive errors
+        if (pollingErrorCount >= MAX_POLLING_ERRORS) {
+            console.log(`${colors.red}❌ Too many consecutive errors, restarting bot...${colors.reset}`);
+            bot.stopPolling({ cancel: true }).then(() => {
+                setTimeout(() => {
+                    console.log(`${colors.cyan}🔄 Restarting polling...${colors.reset}`);
+                    bot.startPolling();
+                    pollingErrorCount = 0;
+                }, 5000);
+            }).catch(err => {
+                console.error(`${colors.red}❌ Failed to restart: ${err.message}${colors.reset}`);
+                process.exit(1);
+            });
+        }
+    } else {
+        // Unknown error - log and continue
+        console.error(`${colors.red}❌ Unexpected error: ${error.stack}${colors.reset}`);
+    }
+});
+
+// Reset error count on successful message
+bot.on('message', () => {
+    if (pollingErrorCount > 0) {
+        pollingErrorCount = 0;
+    }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
