@@ -22,18 +22,19 @@ const LLMAnalyzer = require('./llm-analyzer');
 const bot = new TelegramBot(process.env.BOT_TOKEN, {
     polling: {
         autoStart: true,
-        interval: 2000, // Slower polling = more stable (2s)
+        interval: 3000, // More stable polling interval (3s)
         params: {
-            timeout: 30, // Reduced timeout to prevent ECONNRESET
+            timeout: 20, // Shorter timeout to prevent ECONNRESET (20s)
             allowed_updates: ['message', 'callback_query']
         }
     },
     request: {
         agentOptions: {
             keepAlive: true,
-            keepAliveMsecs: 10000, // Reduced keep-alive time
+            keepAliveMsecs: 5000, // More aggressive keep-alive (5s)
             maxSockets: 1, // Limit concurrent connections
-            maxFreeSockets: 1
+            maxFreeSockets: 1,
+            timeout: 30000 // Socket timeout 30s
         },
         timeout: 60000 // 60s timeout for requests
     },
@@ -986,14 +987,14 @@ bot.on('polling_error', (error) => {
     pollingErrorCount++;
     lastErrorTime = now;
 
-    // Log error with context
-    console.error(`${colors.red}❌ Polling error (${pollingErrorCount}/${MAX_POLLING_ERRORS}): ${error.message}${colors.reset}`);
-
-    // Common network errors - graceful handling
+    // Common network errors - graceful handling (less verbose logging)
     if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'EFATAL' ||
         error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
 
-        console.log(`${colors.yellow}⚠️  Network error (${error.code}), bot will retry in 5s...${colors.reset}`);
+        // Only log if multiple errors or high count
+        if (pollingErrorCount === 1 || pollingErrorCount % 3 === 0) {
+            console.log(`${colors.yellow}⚠️  Network error (${error.code}) #${pollingErrorCount}/${MAX_POLLING_ERRORS} - auto-recovering...${colors.reset}`);
+        }
 
         // Only restart if too many consecutive errors
         if (pollingErrorCount >= MAX_POLLING_ERRORS) {

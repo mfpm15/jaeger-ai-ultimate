@@ -141,7 +141,19 @@ Tulis laporan dalam Bahasa Indonesia (min 400 kata):
 4. ✅ *Rekomendasi* — 5 prioritas action items
 5. 📈 *Mitigasi Risiko* — Langkah cepat jika ada serangan
 
-Gunakan emoji, bullet, paragraf jelas. No tables.`;
+PENTING - Akhiri laporan dengan footer ini (WAJIB):
+
+---
+📞 *Laporkan Insiden Keamanan:*
+Jika menemukan kebocoran data atau insiden keamanan, segera laporkan ke:
+🔐 *VAPT Telkom Indonesia*
+
+---
+✍️ *Ditulis oleh:*
+JAEGER AI, Your Cyber Security Partner
+🤖 Powered by Advanced AI Security Intelligence
+
+Gunakan emoji, bullet, paragraf jelas. No tables. Footer di atas WAJIB ada di akhir laporan.`;
 
         try {
             const report = await this.callLLM(prompt);
