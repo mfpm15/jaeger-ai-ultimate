@@ -150,6 +150,15 @@ body::before {
     letter-spacing: -0.5px;
 }
 
+.logo-image {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    filter: drop-shadow(var(--glow-accent));
+    animation: iconPulse 3s ease-in-out infinite;
+    border-radius: 8px;
+}
+
 .logo-icon {
     font-size: 32px;
     filter: drop-shadow(var(--glow-accent));
