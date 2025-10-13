@@ -7,7 +7,7 @@
 
 // Jaeger MCP Server Configuration
 define('JAEGER_API_BASE_URL', 'http://127.0.0.1:8888');
-define('JAEGER_API_TIMEOUT', 600); // 10 minutes
+define('JAEGER_API_TIMEOUT', 180); // 3 minutes - faster response
 
 // Session Configuration
 define('SESSION_LIFETIME', 3600); // 1 hour

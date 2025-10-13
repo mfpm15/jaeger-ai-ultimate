@@ -6661,7 +6661,7 @@ def setup_logging():
 
 # Configuration (using existing API_PORT from top of file)
 DEBUG_MODE = os.environ.get("DEBUG_MODE", "0").lower() in ("1", "true", "yes", "y")
-COMMAND_TIMEOUT = 600  # 10 minutes default timeout
+COMMAND_TIMEOUT = 180  # 3 minutes default timeout (faster response)
 CACHE_SIZE = 1000
 CACHE_TTL = 3600  # 1 hour
 

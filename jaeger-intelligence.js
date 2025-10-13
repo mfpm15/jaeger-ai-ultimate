@@ -22,7 +22,7 @@ const fetch = require('node-fetch');
 class JaegerIntelligence {
     constructor(baseUrl = 'http://127.0.0.1:8888') {
         this.baseUrl = baseUrl;
-        this.timeout = 600000; // 10 minutes for long scans
+        this.timeout = 180000; // 3 minutes - faster response for better UX
     }
 
     /**

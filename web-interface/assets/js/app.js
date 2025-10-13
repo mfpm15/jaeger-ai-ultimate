@@ -30,11 +30,18 @@ async function checkStatus() {
         if (result.success && result.data.status === 'healthy') {
             statusDot.className = 'status-dot online';
             statusText.textContent = 'Server Online';
-            addMessage('assistant', '✅ Jaeger MCP Server is online and ready!');
+            // Only show message on initial load, not on auto-refresh
+            if (!window.initialStatusCheckDone) {
+                addMessage('assistant', '✅ Jaeger MCP Server is online and ready!');
+                window.initialStatusCheckDone = true;
+            }
         } else {
             statusDot.className = 'status-dot offline';
             statusText.textContent = 'Server Offline';
-            addMessage('assistant', '❌ Jaeger MCP Server is offline. Please start the server.');
+            if (!window.initialStatusCheckDone) {
+                addMessage('assistant', '❌ Jaeger MCP Server is offline. Please start the server.');
+                window.initialStatusCheckDone = true;
+            }
         }
     } catch (error) {
         console.error('Status check failed:', error);
