@@ -196,13 +196,27 @@ function formatExecutionSummary({ result, target, objective }) {
     const safeTarget = escapeMarkdown(target);
     const safeObjective = escapeMarkdown(objective || normalizeObjective(objective));
 
+    // Get severity emoji
+    const totalVulns = result.total_vulnerabilities || 0;
+    let severityEmoji = '✅';
+    if (totalVulns > 10) severityEmoji = '🔴';
+    else if (totalVulns > 5) severityEmoji = '🟠';
+    else if (totalVulns > 0) severityEmoji = '🟡';
+
     const lines = [
-        '📊 *Jaeger Execution Summary*',
-        `🎯 Target  : \`${safeTarget}\``,
-        `🧭 Mode    : \`${safeObjective}\``,
-        `🛠️ Tools   : ${toolsExecuted.length} total | ✅ ${successfulTools.length}${failedTools > 0 ? ` | ❌ ${failedTools}` : ''}`,
-        `⏱️ Runtime : ${result.execution_time ? `${Math.round(result.execution_time)}s` : 'N/A'}`,
-        `🚨 Findings: ${result.total_vulnerabilities || 0} potential issues`
+        '╔════════════════════════════════════════╗',
+        '║   📊 JAEGER AI - SCAN COMPLETE   ║',
+        '╚════════════════════════════════════════╝',
+        '',
+        `🎯 *Target Domain*: \`${safeTarget}\``,
+        `⚡ *Scan Mode*: \`${safeObjective.toUpperCase()}\``,
+        `🛠️ *Tools Executed*: *${toolsExecuted.length}* security tools`,
+        `⏱️ *Total Runtime*: *${result.execution_time ? `${Math.round(result.execution_time)}s` : 'N/A'}*`,
+        `${severityEmoji} *Security Findings*: *${totalVulns}* potential issues`,
+        '',
+        `💡 *Status*: ${totalVulns === 0 ? '✅ No critical issues found' : `⚠️ ${totalVulns} findings require review`}`,
+        '',
+        '═══════════════════════════════════════'
     ];
 
     const toolNames = selectedTools.length
@@ -211,10 +225,11 @@ function formatExecutionSummary({ result, target, objective }) {
 
     if (toolNames.length) {
         const displayNames = toolNames
-            .slice(0, 6)
+            .slice(0, 8)
             .map((name) => escapeMarkdown(name.toUpperCase()));
-        const suffix = toolNames.length > 6 ? '…' : '';
-        lines.push(`🛠 Tools: ${displayNames.join(', ')}${suffix}`);
+        const suffix = toolNames.length > 8 ? ' +' + (toolNames.length - 8) + ' more' : '';
+        lines.push(`🔧 *Tools Used*: ${displayNames.join(', ')}${suffix}`);
+        lines.push('');
     }
 
     return lines.join('\n');
@@ -268,43 +283,89 @@ function extractHighlights(text = '', { maxLines = 8, fallbackLines = 3 } = {}) 
 
 function formatToolOutput(tool) {
     const name = (tool?.tool || 'unknown').toString().toUpperCase();
-    const status = tool?.success === false || tool?.status === 'failed' ? '❌ Failed' : '✅ Success';
+    const status = tool?.success === false || tool?.status === 'failed' ? '❌ FAILED' : '✅ SUCCESS';
     const executionTime = tool?.execution_time ? `${Math.round(tool.execution_time)}s` : 'N/A';
     const command = tool?.command ? tool.command : null;
     const stdout = extractHighlights(tool?.stdout);
     const stderr = extractHighlights(tool?.stderr, { maxLines: 4, fallbackLines: 0 });
     const error = trimOutput(tool?.error, 400);
+    const vulnsFound = tool?.vulnerabilities_found || 0;
 
-    const lines = [`🔧 ${name} — ${status}`, `🕒 Duration: ${executionTime}`];
+    // Tool-specific emojis
+    const toolEmoji = {
+        'NMAP': '🔍',
+        'SUBFINDER': '🌐',
+        'HTTPX': '📡',
+        'NUCLEI': '💣',
+        'FFUF': '🔨',
+        'SQLMAP': '💉',
+        'NIKTO': '🔎',
+        'WPSCAN': '📝',
+        'GOBUSTER': '🚪',
+        'DALFOX': '🔧',
+        'MASSCAN': '⚡',
+        'RUSTSCAN': '🦀',
+        'AMASS': '🕸️',
+        'THEHARVESTER': '🌾',
+        'SHERLOCK': '🔍',
+        'HYDRA': '💪',
+        'HASHCAT': '🔐',
+        'JOHN': '🗝️',
+        'METASPLOIT': '💥',
+        'BURPSUITE': '🔥'
+    }[name] || '🔧';
+
+    const lines = [
+        '',
+        `${toolEmoji} *Tool #${name}*`,
+        `├─ 📊 Status: *${status}*`,
+        `├─ ⏱️ Duration: *${executionTime}*`
+    ];
+
+    if (vulnsFound > 0) {
+        lines.push(`├─ 🚨 Vulnerabilities: *${vulnsFound}*`);
+    }
 
     if (command) {
-        lines.push(`💻 Command: ${command}`);
+        const shortCmd = command.length > 100 ? command.substring(0, 100) + '...' : command;
+        lines.push(`└─ 💻 Command: \`${shortCmd}\``);
+    } else {
+        lines[lines.length - 1] = lines[lines.length - 1].replace('├─', '└─');
     }
 
     if (stdout) {
-        lines.push('📄 Output:');
+        lines.push('');
+        lines.push('📄 *Output Highlights:*');
+        lines.push('```');
         lines.push(stdout);
+        lines.push('```');
     }
 
     if (stderr) {
-        lines.push('⚠️ Stderr:');
+        lines.push('');
+        lines.push('⚠️ *Stderr:*');
+        lines.push('```');
         lines.push(stderr);
+        lines.push('```');
     }
 
     if (error && error !== stderr) {
-        lines.push('❗ Error:');
+        lines.push('');
+        lines.push('❗ *Error:*');
+        lines.push('```');
         lines.push(error);
+        lines.push('```');
     }
 
     const failureText = `${stderr} ${error} ${stdout}`.toLowerCase();
     if (failureText.includes('timeout')) {
-        lines.push('⚠️ Catatan: Permintaan ke target mengalami timeout. Pastikan target responsif atau naikkan pengaturan timeout/proxy.');
+        lines.push('');
+        lines.push('⚠️ *Catatan*: Permintaan ke target timeout. Pastikan target responsif.');
     }
 
     if (failureText.includes('not found') || failureText.includes('command not found')) {
-        lines.push('💡 Tip: Binary tidak ditemukan di server Jaeger. Instal tool ini dan pastikan ada di PATH.');
-    } else if (name === 'NUCLEI' && (tool?.success === false || (error && error.length))) {
-        lines.push('💡 Tip: Pastikan nuclei terinstal dan path binary tersedia di server Jaeger.');
+        lines.push('');
+        lines.push('💡 *Tip*: Binary tidak ditemukan. Install tool dan pastikan ada di PATH.');
     }
 
     return lines.join('\n');
@@ -374,7 +435,30 @@ async function deliverScanOutcome({ chatId, target, objective, result, originalT
     const summary = formatExecutionSummary({ result, target, objective });
     await bot.sendMessage(chatId, summary, { parse_mode: 'Markdown' });
 
+    // Add detailed tool execution report header
+    await bot.sendMessage(chatId, '## 🔧 *Detailed Tool Execution Report*', { parse_mode: 'Markdown' });
+
     await sendToolOutputs(chatId, result.tools_executed);
+
+    // Add final completion summary
+    const totalVulns = result.total_vulnerabilities || 0;
+    const finalSummary = [
+        '',
+        '═══════════════════════════════════════',
+        '✨ *SCAN COMPLETE* ✨',
+        '',
+        totalVulns > 0
+            ? '🔍 *Next Steps:*\n   • Review findings above\n   • Verify vulnerabilities\n   • Apply recommended fixes\n   • Run deeper scans if needed'
+            : '🎉 *Great News!*\n   No immediate security concerns detected.\n   Continue monitoring for new threats.',
+        '',
+        '═══════════════════════════════════════',
+        '',
+        '📚 *Report Generated By:*',
+        '*JAEGER AI, Your Cyber Security Partner*',
+        '🤖 Powered by Advanced AI Security Intelligence'
+    ].join('\n');
+
+    await bot.sendMessage(chatId, finalSummary, { parse_mode: 'Markdown' });
 
     if (originalText && (originalText.toLowerCase().includes('detail') || originalText.toLowerCase().includes('raw'))) {
         const rawData = `\`\`\`json\n${JSON.stringify(result, null, 2).substring(0, 3000)}\n\`\`\``;
