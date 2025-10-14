@@ -209,6 +209,9 @@ async function startScan(target, workflow, requestedTools = null) {
 
         if (result.success && result.data) {
             await displayScanResults(result.data, cleanedTarget, workflow);
+
+            // Add LLM Analysis
+            await analyzeScanResultsWithAI(result.data, cleanedTarget);
         } else {
             addMessage('assistant', `❌ Scan failed: ${result.error || 'Unknown error'}`);
         }
@@ -332,6 +335,77 @@ ${totalVulns > 0 ? '🔍 **Next Steps:**\n   • Review findings above\n   • V
 
     // ADD ENTIRE REPORT AS ONE MESSAGE
     addMessage('assistant', fullReport.trim());
+}
+
+/**
+ * Analyze scan results with AI (Gemini) - LLM Analysis
+ */
+async function analyzeScanResultsWithAI(data, target) {
+    try {
+        // Add loading message
+        const loadingId = addMessage('assistant', '🧠 **AI Analyzing Results...**\n\n🔍 Jaeger AI sedang menganalisis hasil scan dengan teknologi LLM...\n⏳ Please wait, this may take 10-30 seconds<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>');
+
+        const scanResults = data.scan_results || data;
+        const toolsExecuted = scanResults.tools_executed || [];
+        const totalVulns = scanResults.total_vulnerabilities || 0;
+
+        // Compact scan data to save tokens
+        const compactData = {
+            target: target,
+            total_vulnerabilities: totalVulns,
+            tools: toolsExecuted.slice(0, 8).map(tool => ({
+                tool: tool.tool,
+                success: tool.success,
+                highlights: tool.stdout ? tool.stdout.substring(0, 300) : '',
+                vulnerabilities_found: tool.vulnerabilities_found || 0
+            }))
+        };
+
+        // Call LLM Analysis via PHP backend (uses DeepSeek/OpenRouter)
+        const llmResponse = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'llm_analyze',
+                scan_results: compactData,
+                target: target
+            })
+        });
+
+        if (!llmResponse.ok) {
+            throw new Error(`LLM API error: ${llmResponse.status}`);
+        }
+
+        const llmData = await llmResponse.json();
+
+        if (!llmData.success) {
+            throw new Error(llmData.error || 'LLM analysis failed');
+        }
+
+        const analysisText = llmData.analysis || '';
+
+        // Remove loading message
+        removeMessage(loadingId);
+
+        if (analysisText) {
+            // Add AI analysis report
+            addMessage('assistant', `╔═══════════════════════════════════════╗\n║  🧠 AI SECURITY ANALYSIS  ║\n╚═══════════════════════════════════════╝\n\n${analysisText}`);
+        } else {
+            throw new Error('Empty AI response');
+        }
+
+    } catch (error) {
+        console.error('AI Analysis error:', error);
+
+        // Remove loading if it exists
+        const loadingMsg = document.getElementById(loadingId);
+        if (loadingMsg) removeMessage(loadingId);
+
+        // Show fallback message
+        addMessage('assistant', `⚠️ **AI Analysis Unavailable**\n\nThe AI analysis could not be generated at this time.\nError: ${error.message}\n\nPlease review the scan results above for security findings.`);
+    }
 }
 
 /**

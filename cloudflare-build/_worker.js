@@ -106,6 +106,10 @@ export default {
                     });
                     break;
 
+                case 'llm_analyze':
+                    result = await analyzeScanWithLLM(body.scan_results, body.target, env);
+                    break;
+
                 default:
                     return jsonResponse({
                         success: false,
@@ -174,6 +178,159 @@ async function proxyToJaeger(endpoint, data = {}, method = 'POST') {
         return {
             success: false,
             error: 'Failed to connect to Jaeger server',
+            details: error.message
+        };
+    }
+}
+
+/**
+ * Analyze scan results with LLM (OpenRouter/DeepSeek)
+ */
+async function analyzeScanWithLLM(scanResults, target, env) {
+    try {
+        // Get OpenRouter API key from environment (Cloudflare secret)
+        const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY || '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';
+
+        // Compact scan data
+        const compactData = {
+            target: target,
+            total_vulnerabilities: scanResults.total_vulnerabilities || 0,
+            tools: (scanResults.tools || []).slice(0, 8).map(tool => ({
+                tool: tool.tool,
+                success: tool.success,
+                vulnerabilities_found: tool.vulnerabilities_found || 0
+            }))
+        };
+
+        // Build LLM prompt (same template as llm-analyzer.js)
+        const prompt = `Target: ${target}
+Data: ${JSON.stringify(compactData)}
+
+Tulis laporan keamanan INTERAKTIF dalam Bahasa Indonesia (min 500 kata) dengan BANYAK EMOJI:
+
+📋 **FORMAT LAPORAN:**
+
+╔═══════════════════════════════════════╗
+║  🎯 JAEGER AI SECURITY REPORT  ║
+╚═══════════════════════════════════════╝
+
+1️⃣ 🚀 *EXECUTIVE SUMMARY*
+   ├─ 🎯 Target & teknologi terdeteksi
+   ├─ 🔐 Status keamanan overall (gunakan emoji: ✅🟢🟡🟠🔴)
+   ├─ ⚡ Risiko CRITICAL/HIGH/MEDIUM/LOW dengan emoji sesuai severity
+   └─ 💼 Dampak bisnis potensial
+
+2️⃣ 🔍 *DETAILED FINDINGS* (Gunakan box seperti ini untuk setiap finding):
+
+   ┌─────────────────────────────────┐
+   │ 🚨 Finding #1: [Nama]           │
+   ├─────────────────────────────────┤
+   │ Severity: 🔴 CRITICAL           │
+   │ Tool: [tool name]               │
+   │ 📌 Deskripsi: ...               │
+   │ 💥 Impact: ...                  │
+   │ ✅ Rekomendasi: ...             │
+   └─────────────────────────────────┘
+
+3️⃣ 🛠️ *TOOLS EXECUTION SUMMARY*
+   Untuk setiap tool, gunakan emoji sesuai tool:
+   🔍 Nmap - [hasil]
+   🌐 Subfinder - [hasil]
+   📡 HTTPx - [hasil]
+   💣 Nuclei - [hasil]
+   Dan tool lainnya dengan emoji unik
+
+4️⃣ ✨ *SECURITY RECOMMENDATIONS* (5-7 prioritas dengan emoji)
+   🔥 PRIORITY 1: ...
+   ⚡ PRIORITY 2: ...
+   💡 PRIORITY 3: ...
+   (dst)
+
+5️⃣ 🛡️ *INCIDENT RESPONSE PLAN*
+   Jika terjadi serangan aktif:
+   🚨 Step 1: ...
+   🚨 Step 2: ...
+   🚨 Step 3: ...
+
+6️⃣ 📊 *COMPLIANCE & BEST PRACTICES*
+   Berikan saran compliance (ISO, NIST, OWASP) dengan emoji
+
+PENTING - WAJIB akhiri dengan footer ini:
+
+═════════════════════════════════════════
+
+📞 **LAPORKAN INSIDEN KEAMANAN:**
+Jika menemukan kebocoran data atau insiden keamanan:
+🔐 **VAPT Telkom Indonesia**
+
+═════════════════════════════════════════
+
+✍️ **Ditulis oleh:**
+**JAEGER AI, Your Cyber Security Partner**
+🤖 Powered by Advanced AI Security Intelligence
+
+═════════════════════════════════════════
+
+PENTING:
+- Gunakan MINIMAL 50+ emoji di seluruh laporan
+- Setiap section harus ada box/border
+- Gunakan tree structure (├─ └─) untuk bullets
+- Severity HARUS ada emoji: 🔴 CRITICAL, 🟠 HIGH, 🟡 MEDIUM, 🟢 LOW, ✅ SECURE
+- Footer di atas WAJIB ada di akhir
+- Analisis HANYA tools yang dijalankan (${compactData.tools.map(t => t.tool).join(', ')}). Jangan menyebutkan tools yang tidak ada.`;
+
+        // Call OpenRouter API (DeepSeek)
+        const llmResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                'HTTP-Referer': 'https://jaeger-ai.pages.dev',
+                'X-Title': 'Jaeger AI Security Scanner'
+            },
+            body: JSON.stringify({
+                model: 'deepseek/deepseek-chat',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Cybersecurity expert for pentest analysis.'
+                    },
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                temperature: 0.7,
+                max_tokens: 8000
+            })
+        });
+
+        if (!llmResponse.ok) {
+            const errorText = await llmResponse.text();
+            throw new Error(`OpenRouter API error: ${errorText}`);
+        }
+
+        const llmData = await llmResponse.json();
+        let analysis = llmData.choices[0].message.content;
+
+        // Clean up response - remove "Berikut adalah..." phrases
+        analysis = analysis
+            .replace(/^Berikut adalah.*?\n+/gmi, '')
+            .replace(/^Berikut laporan.*?\n+/gmi, '')
+            .replace(/^Berikut ini adalah.*?\n+/gmi, '')
+            .replace(/^Berikut hasil.*?\n+/gmi, '')
+            .trim();
+
+        return {
+            success: true,
+            analysis: analysis
+        };
+
+    } catch (error) {
+        console.error('LLM analysis error:', error);
+        return {
+            success: false,
+            error: 'Failed to generate AI analysis',
             details: error.message
         };
     }

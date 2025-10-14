@@ -294,6 +294,67 @@ switch ($action) {
         echo json_encode($response);
         break;
 
+    case 'llm_analyze':
+        $scan_results = $request['scan_results'] ?? null;
+        $target = $request['target'] ?? '';
+
+        if (empty($scan_results) || empty($target)) {
+            echo json_encode(['success' => false, 'error' => 'Scan results and target are required']);
+            exit;
+        }
+
+        // Call Node.js LLM analyzer
+        $results_json = json_encode($scan_results);
+        $escaped_json = escapeshellarg($results_json);
+        $escaped_target = escapeshellarg($target);
+
+        // Execute Node.js script
+        $node_script = __DIR__ . '/../../llm-analyzer-cli.js';
+        $command = "node " . escapeshellarg($node_script) . " analyze $escaped_target $escaped_json 2>&1";
+
+        log_message('INFO', "Executing LLM analysis for target: $target");
+
+        $output = shell_exec($command);
+
+        if ($output === null) {
+            log_message('ERROR', 'LLM analysis failed: command execution failed');
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to execute LLM analysis'
+            ]);
+            exit;
+        }
+
+        // Parse output
+        $lines = explode("\n", trim($output));
+        $analysis = '';
+        $capture = false;
+
+        foreach ($lines as $line) {
+            if (strpos($line, 'ANALYSIS_START') !== false) {
+                $capture = true;
+                continue;
+            }
+            if (strpos($line, 'ANALYSIS_END') !== false) {
+                break;
+            }
+            if ($capture) {
+                $analysis .= $line . "\n";
+            }
+        }
+
+        if (empty($analysis)) {
+            // Fallback: return all output
+            $analysis = $output;
+        }
+
+        log_message('INFO', 'LLM analysis completed successfully');
+        echo json_encode([
+            'success' => true,
+            'analysis' => trim($analysis)
+        ]);
+        break;
+
     default:
         log_message('WARNING', "Invalid action requested: $action");
         echo json_encode([

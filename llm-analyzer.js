@@ -130,6 +130,9 @@ Return JSON:
         // Truncate large scan data to save tokens
         const compactData = this.compactScanData(scanResults);
 
+        // Extract tools that were actually executed
+        const executedTools = compactData.tools.map(t => t.tool).filter(Boolean).join(', ') || 'unknown';
+
         // Optimized prompt - more concise with MORE EMOJIS!
         const prompt = `Target: ${target}
 Data: ${JSON.stringify(compactData)}
@@ -204,7 +207,8 @@ PENTING:
 - Setiap section harus ada box/border
 - Gunakan tree structure (├─ └─) untuk bullets
 - Severity HARUS ada emoji: 🔴 CRITICAL, 🟠 HIGH, 🟡 MEDIUM, 🟢 LOW, ✅ SECURE
-- Footer di atas WAJIB ada di akhir`;
+- Footer di atas WAJIB ada di akhir
+- Analisis HANYA tools yang dijalankan: ${executedTools}. JANGAN menyebutkan tools lain yang tidak ada dalam list ini.`;
 
         try {
             const report = await this.callLLM(prompt);
