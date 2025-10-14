@@ -130,30 +130,81 @@ Return JSON:
         // Truncate large scan data to save tokens
         const compactData = this.compactScanData(scanResults);
 
-        // Optimized prompt - more concise
+        // Optimized prompt - more concise with MORE EMOJIS!
         const prompt = `Target: ${target}
 Data: ${JSON.stringify(compactData)}
 
-Tulis laporan dalam Bahasa Indonesia (min 400 kata):
-1. 🚀 *Executive Summary* — Status keamanan, risiko utama, dampak bisnis
-2. 🔎 *Temuan* — HIGH/MEDIUM/LOW findings dengan bukti
-3. 🛠️ *Tool Results* — Highlight per tool
-4. ✅ *Rekomendasi* — 5 prioritas action items
-5. 📈 *Mitigasi Risiko* — Langkah cepat jika ada serangan
+Tulis laporan keamanan INTERAKTIF dalam Bahasa Indonesia (min 500 kata) dengan BANYAK EMOJI:
 
-PENTING - Akhiri laporan dengan footer ini (WAJIB):
+📋 **FORMAT LAPORAN:**
 
----
-📞 *Laporkan Insiden Keamanan:*
-Jika menemukan kebocoran data atau insiden keamanan, segera laporkan ke:
-🔐 *VAPT Telkom Indonesia*
+╔═══════════════════════════════════════╗
+║  🎯 JAEGER AI SECURITY REPORT  ║
+╚═══════════════════════════════════════╝
 
----
-✍️ *Ditulis oleh:*
-JAEGER AI, Your Cyber Security Partner
+1️⃣ 🚀 *EXECUTIVE SUMMARY*
+   ├─ 🎯 Target & teknologi terdeteksi
+   ├─ 🔐 Status keamanan overall (gunakan emoji: ✅🟢🟡🟠🔴)
+   ├─ ⚡ Risiko CRITICAL/HIGH/MEDIUM/LOW dengan emoji sesuai severity
+   └─ 💼 Dampak bisnis potensial
+
+2️⃣ 🔍 *DETAILED FINDINGS* (Gunakan box seperti ini untuk setiap finding):
+
+   ┌─────────────────────────────────┐
+   │ 🚨 Finding #1: [Nama]           │
+   ├─────────────────────────────────┤
+   │ Severity: 🔴 CRITICAL           │
+   │ Tool: [tool name]               │
+   │ 📌 Deskripsi: ...               │
+   │ 💥 Impact: ...                  │
+   │ ✅ Rekomendasi: ...             │
+   └─────────────────────────────────┘
+
+3️⃣ 🛠️ *TOOLS EXECUTION SUMMARY*
+   Untuk setiap tool, gunakan emoji sesuai tool:
+   🔍 Nmap - [hasil]
+   🌐 Subfinder - [hasil]
+   📡 HTTPx - [hasil]
+   💣 Nuclei - [hasil]
+   Dan tool lainnya dengan emoji unik
+
+4️⃣ ✨ *SECURITY RECOMMENDATIONS* (5-7 prioritas dengan emoji)
+   🔥 PRIORITY 1: ...
+   ⚡ PRIORITY 2: ...
+   💡 PRIORITY 3: ...
+   (dst)
+
+5️⃣ 🛡️ *INCIDENT RESPONSE PLAN*
+   Jika terjadi serangan aktif:
+   🚨 Step 1: ...
+   🚨 Step 2: ...
+   🚨 Step 3: ...
+
+6️⃣ 📊 *COMPLIANCE & BEST PRACTICES*
+   Berikan saran compliance (ISO, NIST, OWASP) dengan emoji
+
+PENTING - WAJIB akhiri dengan footer ini:
+
+═════════════════════════════════════════
+
+📞 **LAPORKAN INSIDEN KEAMANAN:**
+Jika menemukan kebocoran data atau insiden keamanan:
+🔐 **VAPT Telkom Indonesia**
+
+═════════════════════════════════════════
+
+✍️ **Ditulis oleh:**
+**JAEGER AI, Your Cyber Security Partner**
 🤖 Powered by Advanced AI Security Intelligence
 
-Gunakan emoji, bullet, paragraf jelas. No tables. Footer di atas WAJIB ada di akhir laporan.`;
+═════════════════════════════════════════
+
+PENTING:
+- Gunakan MINIMAL 50+ emoji di seluruh laporan
+- Setiap section harus ada box/border
+- Gunakan tree structure (├─ └─) untuk bullets
+- Severity HARUS ada emoji: 🔴 CRITICAL, 🟠 HIGH, 🟡 MEDIUM, 🟢 LOW, ✅ SECURE
+- Footer di atas WAJIB ada di akhir`;
 
         try {
             const report = await this.callLLM(prompt);

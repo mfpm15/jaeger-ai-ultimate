@@ -92,14 +92,50 @@ async function handleSubmit(event) {
 }
 
 /**
+ * Clean and parse target input (remove command keywords)
+ */
+function cleanTarget(input) {
+    // Remove common command keywords that users might type
+    const keywords = [
+        'scan', 'coba', 'test', 'check', 'analyze', 'nmap', 'nikto',
+        'sqlmap', 'nuclei', 'ffuf', 'httpx', 'subfinder', 'please',
+        'tolong', 'dong', 'ya', 'aja', 'deh', 'try', 'run', 'execute'
+    ];
+
+    let cleaned = input.trim();
+
+    // Remove keywords (case insensitive)
+    keywords.forEach(keyword => {
+        const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+        cleaned = cleaned.replace(regex, '');
+    });
+
+    // Clean up extra spaces and trim
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+    // If nothing left, return original (user probably typed valid domain)
+    return cleaned || input.trim();
+}
+
+/**
  * Start scan
  */
 async function startScan(target, workflow) {
     isScanning = true;
     updateSubmitButton(true);
 
-    // Add loading message
-    const loadingId = addMessage('assistant', '⚙️ Jaeger is analyzing and scanning the target<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>');
+    // Clean the target input
+    const cleanedTarget = cleanTarget(target);
+
+    // Add loading message with more emojis
+    const loadingId = addMessage('assistant', '🚀 Jaeger AI is analyzing your target...\n⚙️ Preparing security tools<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>');
+
+    // Determine max_tools based on workflow
+    let maxTools = 5;
+    if (workflow === 'comprehensive') maxTools = 10;
+    else if (workflow === 'vulnerability_hunting') maxTools = 8;
+    else if (workflow === 'reconnaissance') maxTools = 6;
+    else if (workflow === 'osint') maxTools = 4;
 
     try {
         const response = await fetch(API_ENDPOINT, {
@@ -109,9 +145,9 @@ async function startScan(target, workflow) {
             },
             body: JSON.stringify({
                 action: 'smart_scan',
-                target: target,
+                target: cleanedTarget,
                 objective: workflow,
-                max_tools: 5
+                max_tools: maxTools
             })
         });
 
@@ -136,7 +172,7 @@ async function startScan(target, workflow) {
 }
 
 /**
- * Display scan results
+ * Display scan results with enhanced emojis and formatting
  */
 function displayScanResults(data, target, workflow) {
     const scanResults = data.scan_results || data;
@@ -144,52 +180,102 @@ function displayScanResults(data, target, workflow) {
     const executionSummary = scanResults.execution_summary || {};
     const totalVulns = scanResults.total_vulnerabilities || 0;
 
-    // Summary
-    let summaryMsg = `
-📊 **JAEGER Execution Summary**
+    // Get workflow emoji
+    const workflowEmoji = {
+        'quick': '⚡',
+        'reconnaissance': '🔍',
+        'vulnerability_hunting': '🎯',
+        'osint': '🕵️',
+        'comprehensive': '🚀'
+    }[workflow] || '🔬';
 
-🎯 **Target**: \`${target}\`
-🧭 **Mode**: \`${workflow}\`
-🛠️ **Tools Executed**: ${toolsExecuted.length}
-⏱️ **Runtime**: ${executionSummary.total_execution_time || 'N/A'}s
-🚨 **Findings**: ${totalVulns} potential issues
+    // Get severity emoji
+    let severityEmoji = '✅';
+    if (totalVulns > 10) severityEmoji = '🔴';
+    else if (totalVulns > 5) severityEmoji = '🟠';
+    else if (totalVulns > 0) severityEmoji = '🟡';
+
+    // Summary with more emojis
+    let summaryMsg = `
+╔════════════════════════════════════════╗
+║   📊 JAEGER AI - SCAN COMPLETE   ║
+╚════════════════════════════════════════╝
+
+🎯 **Target Domain**: \`${target}\`
+${workflowEmoji} **Scan Mode**: \`${workflow.toUpperCase()}\`
+🛠️ **Tools Executed**: **${toolsExecuted.length}** security tools
+⏱️ **Total Runtime**: **${executionSummary.total_execution_time || 'N/A'}s**
+${severityEmoji} **Security Findings**: **${totalVulns}** potential issues
+
+💡 **Status**: ${totalVulns === 0 ? '✅ No critical issues found' : `⚠️ ${totalVulns} findings require review`}
     `;
 
     addMessage('assistant', summaryMsg.trim());
 
-    // Tool outputs
+    // Tool outputs with more emojis
     if (toolsExecuted.length > 0) {
-        addMessage('assistant', '---\n### 🔧 Tool Execution Details\n');
+        addMessage('assistant', '\n═══════════════════════════════════════\n## 🔧 **Detailed Tool Execution Report**\n');
 
         toolsExecuted.forEach((tool, index) => {
             const toolName = (tool.tool || 'unknown').toUpperCase();
-            const status = tool.success === false || tool.status === 'failed' ? '❌ Failed' : '✅ Success';
+            const isSuccess = tool.success !== false && tool.status !== 'failed';
+            const status = isSuccess ? '✅ **SUCCESS**' : '❌ **FAILED**';
             const executionTime = tool.execution_time ? `${Math.round(tool.execution_time)}s` : 'N/A';
 
-            let toolMsg = `\n**${index + 1}. ${toolName}** — ${status}\n`;
-            toolMsg += `⏱️ Duration: ${executionTime}\n`;
+            // Tool-specific emojis
+            const toolEmoji = {
+                'NMAP': '🔍',
+                'SUBFINDER': '🌐',
+                'HTTPX': '📡',
+                'NUCLEI': '💣',
+                'FFUF': '🔨',
+                'SQLMAP': '💉',
+                'NIKTO': '🔎',
+                'WPSCAN': '📝',
+                'GOBUSTER': '🚪'
+            }[toolName] || '🔧';
+
+            let toolMsg = `\n${toolEmoji} **Tool #${index + 1}: ${toolName}**\n`;
+            toolMsg += `├─ 📊 Status: ${status}\n`;
+            toolMsg += `├─ ⏱️ Duration: **${executionTime}**\n`;
 
             if (tool.command) {
-                toolMsg += `💻 Command: \`${tool.command}\`\n`;
+                toolMsg += `└─ 💻 Command: \`${tool.command}\`\n`;
             }
 
             if (tool.stdout && tool.stdout.trim()) {
                 const output = extractHighlights(tool.stdout);
                 if (output) {
-                    toolMsg += `\n📄 Output:\n\`\`\`\n${output}\n\`\`\`\n`;
+                    toolMsg += `\n📄 **Output Highlights:**\n\`\`\`\n${output}\n\`\`\`\n`;
                 }
             }
 
+            if (tool.vulnerabilities_found && tool.vulnerabilities_found > 0) {
+                toolMsg += `\n🚨 **Vulnerabilities Found**: ${tool.vulnerabilities_found}\n`;
+            }
+
             if (tool.error && tool.error.trim()) {
-                toolMsg += `\n❗ Error: \`${tool.error}\`\n`;
+                toolMsg += `\n❗ **Error Details**: \`${tool.error.substring(0, 200)}\`\n`;
             }
 
             addMessage('assistant', toolMsg);
         });
+    } else {
+        addMessage('assistant', '\n⚠️ **No tools were executed**. This might indicate a configuration issue.');
     }
 
-    // Final summary
-    addMessage('assistant', '\n✅ **Scan completed!** Review the results above for detailed findings.');
+    // Final summary with emoji
+    const completionMsg = `
+═══════════════════════════════════════
+✨ **SCAN COMPLETE** ✨
+
+${totalVulns > 0 ? '🔍 **Next Steps:**\n- Review findings above\n- Verify vulnerabilities\n- Apply recommended fixes' : '🎉 **Great News!**\nNo immediate security concerns detected.'}
+
+📚 **Report Generated By:**
+JAEGER AI, Your Cyber Security Partner
+    `;
+
+    addMessage('assistant', completionMsg.trim());
 }
 
 /**
