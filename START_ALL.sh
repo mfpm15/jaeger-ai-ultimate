@@ -19,7 +19,7 @@ echo -e "${CYAN}║        JAEGER AI - ALL SERVICES STARTUP               ║${N
 echo -e "${CYAN}║                                                       ║${NC}"
 echo -e "${CYAN}║  🎯 Jaeger MCP Server                                 ║${NC}"
 echo -e "${CYAN}║  🤖 Telegram Bot                                      ║${NC}"
-echo -e "${CYAN}║  🌐 Web Interface                                     ║${NC}"
+echo -e "${CYAN}║  🌐 Web Interface (Next.js)                           ║${NC}"
 echo -e "${CYAN}╚═══════════════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -42,10 +42,21 @@ if [ ! -d "jaeger-ai-core" ]; then
     exit 1
 fi
 
-# Check if web-interface directory exists
-if [ ! -d "web-interface" ]; then
-    echo -e "${RED}❌ Error: web-interface directory not found!${NC}"
+# Check if web-next directory exists
+if [ ! -d "web-next" ]; then
+    echo -e "${RED}❌ Error: web-next directory not found!${NC}"
     exit 1
+fi
+
+# Check if web-next dependencies are installed (node_modules exists)
+if [ ! -d "web-next/node_modules" ]; then
+    echo -e "${YELLOW}⚠️  Web interface dependencies not installed.${NC}"
+    echo -e "${YELLOW}   Run: npm install --prefix web-next${NC}"
+    read -p "Continue anyway? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
 fi
 
 # Check if Python virtual environment exists
@@ -74,6 +85,20 @@ trap cleanup SIGINT SIGTERM
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${CYAN}🚀 [1/3] Starting Jaeger MCP Server...${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+API_PORT=${JAEGER_PORT:-8888}
+if lsof -Pi :$API_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "${YELLOW}   ⚠️  Port $API_PORT is currently in use. Attempting graceful shutdown...${NC}"
+    pkill -f "jaeger_server.py" 2>/dev/null || true
+    pkill -f "python3 .*jaeger_server.py" 2>/dev/null || true
+    sleep 2
+    if lsof -Pi :$API_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "${RED}   ❌ Port $API_PORT is still occupied. Please stop the running process and try again.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}   ✅ Port $API_PORT cleared.${NC}"
+fi
+
 cd jaeger-ai-core
 ./jaeger-env/bin/python3 jaeger_server.py > ../jaeger-mcp.log 2>&1 &
 JAEGER_PID=$!
@@ -86,10 +111,10 @@ echo -e "${YELLOW}   ⏳ Waiting for server to start...${NC}"
 sleep 8
 
 # Check if Jaeger is healthy
-HEALTH_CHECK=$(curl -s http://127.0.0.1:8888/health 2>/dev/null || echo "failed")
+HEALTH_CHECK=$(curl -s http://127.0.0.1:${API_PORT}/health 2>/dev/null || echo "failed")
 if [[ $HEALTH_CHECK == *"healthy"* ]] || [[ $HEALTH_CHECK == *"ok"* ]]; then
     echo -e "${GREEN}   ✅ Jaeger MCP Server is running!${NC}"
-    echo -e "${GREEN}   📡 API: http://127.0.0.1:8888${NC}"
+    echo -e "${GREEN}   📡 API: http://127.0.0.1:${API_PORT}${NC}"
 else
     echo -e "${RED}   ❌ Jaeger server failed to start!${NC}"
     echo -e "${YELLOW}   Check jaeger-mcp.log for details${NC}"
@@ -123,32 +148,32 @@ else
 fi
 echo ""
 
-# 3. Start PHP Web Server
+# 3. Start Next.js Web Server
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${CYAN}🌐 [3/3] Starting Web Interface...${NC}"
+echo -e "${CYAN}🌐 [3/3] Starting Web Interface (Next.js)...${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-# Check if port 8080 is already in use
-if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo -e "${YELLOW}   ⚠️  Port 8080 is already in use. Stopping existing process...${NC}"
-    pkill -f "php.*8080" 2>/dev/null || true
+# Check if port 3000 is already in use
+if lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    echo -e "${YELLOW}   ⚠️  Port 3000 is already in use. Stopping existing process...${NC}"
+    pkill -f "next dev" 2>/dev/null || true
+    pkill -f "node.*web-next" 2>/dev/null || true
     sleep 1
 fi
 
-cd web-interface
-php -S localhost:8080 > ../web-server.log 2>&1 &
+LOG_FILE="web-next.log"
+npm run web:dev > "$LOG_FILE" 2>&1 &
 WEB_PID=$!
-cd ..
 echo -e "${YELLOW}   PID: $WEB_PID${NC}"
-echo -e "${YELLOW}   Log: web-server.log${NC}"
+echo -e "${YELLOW}   Log: $LOG_FILE${NC}"
 sleep 2
 if ps -p $WEB_PID > /dev/null; then
     echo -e "${GREEN}   ✅ Web Interface is running!${NC}"
-    echo -e "${GREEN}   🌐 URL: ${CYAN}http://localhost:8080${NC}"
+    echo -e "${GREEN}   🌐 URL: ${CYAN}http://localhost:3000${NC}"
 else
     echo -e "${RED}   ❌ Web Interface failed to start!${NC}"
-    echo -e "${YELLOW}   Check web-server.log for details${NC}"
-    tail -5 web-server.log
+    echo -e "${YELLOW}   Check $LOG_FILE for details${NC}"
+    tail -5 "$LOG_FILE"
 fi
 echo ""
 
@@ -167,8 +192,8 @@ fi
 echo -e "   ${GREEN}•${NC} Web Interface:      ${GREEN}✅ Running${NC} (PID: $WEB_PID)"
 echo ""
 echo -e "${CYAN}🔗 Access Points:${NC}"
-echo -e "   ${GREEN}•${NC} Web UI:  ${CYAN}http://localhost:8080${NC}"
-echo -e "   ${GREEN}•${NC} API:     ${CYAN}http://127.0.0.1:8888/health${NC}"
+echo -e "   ${GREEN}•${NC} Web UI:  ${CYAN}http://localhost:3000${NC}"
+echo -e "   ${GREEN}•${NC} API:     ${CYAN}http://127.0.0.1:${API_PORT}/health${NC}"
 if [ $TELEGRAM_PID -ne 0 ]; then
     echo -e "   ${GREEN}•${NC} Telegram: ${CYAN}Send /start to your bot${NC}"
 fi
@@ -182,16 +207,20 @@ echo -e "${GREEN}Starting live log monitoring...${NC}"
 sleep 2
 
 # Tail logs in real-time
-tail -f jaeger-mcp.log telegram-bot.log web-server.log 2>/dev/null
+if [ $TELEGRAM_PID -ne 0 ]; then
+    tail -f jaeger-mcp.log telegram-bot.log "$LOG_FILE" 2>/dev/null
+else
+    tail -f jaeger-mcp.log "$LOG_FILE" 2>/dev/null
+fi
 echo -e "${CYAN}📝 Logs:${NC}"
 echo -e "   ${GREEN}•${NC} MCP:      ${CYAN}tail -f jaeger-mcp.log${NC}"
 if [ $TELEGRAM_PID -ne 0 ]; then
     echo -e "   ${GREEN}•${NC} Telegram: ${CYAN}tail -f telegram-bot.log${NC}"
 fi
-echo -e "   ${GREEN}•${NC} Web:      ${CYAN}tail -f web-server.log${NC}"
+echo -e "   ${GREEN}•${NC} Web:      ${CYAN}tail -f $LOG_FILE${NC}"
 echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${YELLOW}💡 Tip: Open ${CYAN}http://localhost:8080${YELLOW} in your browser${NC}"
+echo -e "${YELLOW}💡 Tip: Open ${CYAN}http://localhost:3000${YELLOW} in your browser${NC}"
 echo -e "${YELLOW}💡 Press Ctrl+C to stop all services${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""

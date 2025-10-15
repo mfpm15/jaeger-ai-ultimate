@@ -34,6 +34,13 @@ bower_components
 # node_modules
 node_modules/
 npm-debug.log*
+web-next/node_modules/
+web-next/.next/
+web-next/.turbo/
+web-next/.vercel/
+web-next/.last-build.log
+.cf-pages/
+jaeger-next-*.zip
 
 # Optional npm cache directory
 .npm

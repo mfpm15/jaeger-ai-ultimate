@@ -1,0 +1,23 @@
+{
+  "name": "jaeger-web-next",
+  "version": "5.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "cf:build": "npx @cloudflare/next-on-pages build --output-dir ../.cf-pages"
+  },
+  "dependencies": {
+    "next": "14.1.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "eslint": "8.57.0",
+    "eslint-config-next": "14.1.4",
+    "@cloudflare/next-on-pages": "1.9.0",
+    "wrangler": "3.72.0"
+  }
+}

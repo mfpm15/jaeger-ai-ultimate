@@ -1,5 +1,0 @@
-# API requests to Cloudflare Worker
-/api/* /:splat 200
-
-# SPA routing - all other requests to index.html
-/* /index.html 200

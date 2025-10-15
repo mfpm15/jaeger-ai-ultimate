@@ -27,7 +27,9 @@ async function main() {
 
         // Initialize LLM Analyzer with OpenRouter/DeepSeek
         const analyzer = new LLMAnalyzer({
-            maxTokens: 8000
+            maxTokens: 8000,
+            enableLogging: false,
+            providerPriority: ['openrouter', 'deepseek', 'chimera', 'zai']
         });
 
         // Analyze scan results

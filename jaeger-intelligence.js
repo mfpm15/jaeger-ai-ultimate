@@ -252,6 +252,15 @@ class JaegerIntelligence {
                 selected_tools: Array.isArray(summary.tools_used)
                     ? summary.tools_used
                     : toolsExecuted.map((tool) => tool.tool).filter(Boolean),
+                unsupported_tools: Array.isArray(scanResults.unsupported_tools)
+                    ? scanResults.unsupported_tools
+                    : [],
+                recommended_alternatives: Array.isArray(scanResults.recommended_alternatives)
+                    ? scanResults.recommended_alternatives
+                    : [],
+                available_tools: Array.isArray(scanResults.available_tools)
+                    ? scanResults.available_tools
+                    : [],
                 timestamp: data.timestamp,
                 raw: data
             };

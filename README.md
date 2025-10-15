@@ -1,416 +1,170 @@
-# JAEGER AI v4.0 - Intelligent Penetration Testing Platform
+# JAEGER AI v5.0 — Production Ready Intelligence Platform
 
-**AI-Powered Security Testing via Telegram Bot & Web Interface**
-
-Jaeger AI adalah platform penetration testing berbasis AI yang mengintegrasikan Jaeger MCP (150+ security tools) dengan LLM intelligence (DeepSeek, Chimera, Z AI) melalui **2 interface alternatif**:
-
-- 🤖 **Telegram Bot** - Mobile-friendly, group collaboration
-- 🌐 **Web Interface** (NEW!) - Desktop-friendly, Claude-like UI (PHP Native)
+**AI-assisted penetration testing dengan 150+ security tools, LLM reporting, dan opsi deployment fleksibel (Cloudflare, Vercel, atau all-in-one).**
 
 ---
 
-## 🎯 Grand Design Architecture
+## 🎯 Kenapa v5.0 Berbeda
+
+- ✅ **LLM Analyzer terbaru** (DeepSeek/OpenRouter) dengan smart tool filtering dan format laporan profesional.
+- ✅ **Frontend ringan** siap upload ke Cloudflare Pages & Vercel (ZIP disediakan).
+- ✅ **Backend MCP server** mandiri yang menjalankan seluruh workflow keamanan.
+- ✅ **Dokumentasi lengkap** untuk instalasi, deployment, dan operasi harian.
+- ✅ **Repo bersih** (–435 MB) tanpa artifact lama; fokus pada runtime nyata.
+
+---
+
+## 🏗️ Arsitektur Tingkat Tinggi
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER (Telegram)                          │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    JAEGER TELEGRAM BOT                           │
-│                  (jaeger-telegram-bot.js)                        │
-│  • Natural Language Processing                                   │
-│  • Command Handling                                              │
-│  • User Interface                                                │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-                ┌──────────────┴──────────────┐
-                ▼                              ▼
-┌───────────────────────────┐   ┌─────────────────────────────────┐
-│    LLM ANALYZER           │   │  HEXSTRIKE INTELLIGENCE BRIDGE  │
-│   (llm-analyzer.js)       │◄──┤  (jaeger-intelligence.js)    │
-│                           │   │                                 │
-│  • Request Analysis       │   │  • API Communication            │
-│  • Result Processing      │   │  • Workflow Management          │
-│  • Report Generation      │   │  • Tool Selection               │
-└───────────────────────────┘   └──────────┬──────────────────────┘
-                                           │
-                                           ▼
-                         ┌─────────────────────────────────────────┐
-                         │   HEXSTRIKE MCP SERVER (Python)         │
-                         │   (jaeger_server.py + jaeger_mcp) │
-                         │                                         │
-                         │  • 150+ Security Tools Database         │
-                         │  • Intelligent Tool Selection           │
-                         │  • Multi-Agent AI System                │
-                         │  • Autonomous Execution                 │
-                         └──────────┬──────────────────────────────┘
-                                    │
-              ┌─────────────────────┼─────────────────────┐
-              ▼                     ▼                     ▼
-        ┌──────────┐         ┌──────────┐         ┌──────────┐
-        │  Network │         │   Web    │         │   OSINT  │
-        │  Tools   │         │  Tools   │         │  Tools   │
-        │  (25+)   │         │  (40+)   │         │  (16+)   │
-        └──────────┘         └──────────┘         └──────────┘
-              ▼                     ▼                     ▼
-        ┌──────────┐         ┌──────────┐         ┌──────────┐
-        │  Cloud   │         │  Binary  │         │  Exploit │
-        │  Tools   │         │  Tools   │         │  Tools   │
-        │  (20+)   │         │  (25+)   │         │  (16+)   │
-        └──────────┘         └──────────┘         └──────────┘
-                                    │
-                                    ▼
-                    ┌───────────────────────────────┐
-                    │  RESULTS → LLM ANALYSIS →     │
-                    │  FORMATTED REPORT → TELEGRAM  │
-                    └───────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                      USER INTERFACE                        │
+│  • Web UI (Cloudflare Pages / Vercel)                      │
+│  • Telegram Bot (jaeger-telegram-bot.js)                   │
+└───────────────┬────────────────────────────────────────────┘
+                │ HTTP/HTTPS
+                ▼
+┌────────────────────────────────────────────────────────────┐
+│       API EDGE / PROXY (Cloudflare Worker / Vercel)        │
+│  • endpoint /api/* → VPS                                   │
+│  • endpoint /llm_analyze → OpenRouter                      │
+└───────────────┬────────────────────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────────────────────┐
+│                 MCP SERVER (VPS Anda)                      │
+│  jaeger-intelligence.js                                   │
+│  ├─ Orkestrasi workflow (Recon, Vulnhunt, OSINT, Smart Scan)│
+│  ├─ Eksekusi 150+ tools (nmap, nuclei, httpx, dll)         │
+│  └─ Endpoint REST: /api/intelligence/* & /health           │
+└────────────────────────────────────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────────────────────┐
+│                   LLM ANALYZER (Node.js)                   │
+│  llm-analyzer.js / llm-analyzer-cli.js                     │
+│  • DeepSeek → Chimera → Z AI failover                      │
+│  • Smart filtering tools yang benar-benar dijalankan       │
+│  • Format laporan premium (emoji, tree layout, dsb.)       │
+└────────────────────────────────────────────────────────────┘
+```
+
+Frontend hanya menangani UI + proxy. Semua aksi penetration testing terjadi di MCP server Anda sehingga tidak melanggar ToS penyedia hosting.
+
+---
+
+## 🚀 Quick Start
+
+### Option A — Split Deployment (Direkomendasikan)
+1. **Siapkan VPS** (Ubuntu/Debian) dan ikuti `GUIDE_MCP_SERVER.md`.
+2. **Deploy Frontend** → ikuti `GUIDE_DEPLOY.md` (Cloudflare Pages & Vercel).
+3. Set `NEXT_PUBLIC_MCP_URL` pada environment platform (arahkan ke `https://YOUR-VPS:8888` atau URL tunnel).
+4. (Opsional) Set `OPENROUTER_API_KEY` sebagai secret jika ingin override di edge.
+5. Jalankan health check: `curl http://YOUR-VPS-IP:8888/health` lalu lakukan Quick Scan via UI.
+
+### Option B — All-in-One (Frontend + Backend di satu VPS)
+1. Ikuti langkah 1–6 pada `GUIDE_MCP_SERVER.md`.
+2. Jalankan web interface lokal: `npm run web:dev --prefix web-next` (port 3000).
+3. Optional: pasang Nginx/Caddy untuk reverse proxy & HTTPS.
+
+---
+
+## 🔧 Komponen Inti
+
+| Berkas | Fungsi |
+| --- | --- |
+| `jaeger-intelligence.js` | REST bridge ke MCP server Python, workflow automation, health endpoint |
+| `llm-analyzer.js` | LLM formatter, smart filtering, prompt template v5.0 |
+| `llm-analyzer-cli.js` | Wrapper CLI agar PHP / shell dapat memanggil analyzer |
+| `web-next/` | Next.js web interface (Vercel & Cloudflare ready) |
+| `jaeger-telegram-bot.js` | Bot Telegram dengan format laporan baru |
+| `install_jaeger_tools.sh` | Skrip instalasi tool keamanan utama |
+| `START_ALL.sh` | Menjalankan MCP, Telegram bot, dan Next.js web dev server |
+| `GUIDE_LOCAL_SETUP.md` | Setup & pengujian lokal end-to-end |
+| `GUIDE_MCP_SERVER.md` | Instalasi MCP server di VPS |
+| `GUIDE_DEPLOY.md` | Cloudflare Pages & Vercel deployment |
+
+`./PREPARE_DEPLOYMENT.sh` menghasilkan arsip berikut:
+
+```
+jaeger-next-vercel.zip      # Upload langsung ke Vercel atau gunakan via Git
+jaeger-next-cloudflare.zip  # Sumber Next.js untuk build Pages (next-on-pages)
 ```
 
 ---
 
-## 🚀 Core Components
+## 🧠 LLM Analyzer Highlights
 
-### 1. **Interface Layer** (Choose one or both!)
-
-#### A. Telegram Bot (`jaeger-telegram-bot.js`)
-- Mobile-friendly interface
-- Natural language command processing
-- Real-time status updates via Telegram
-- Group collaboration support
-
-#### B. Web Interface (NEW! `web-interface/`)
-- Claude-like UI design (PHP Native)
-- Desktop-optimized experience
-- Real-time chat interface
-- No Telegram account needed
-- **Quick Start**: `cd web-interface && php -S localhost:8080`
-
-### 2. **LLM Analyzer** (`llm-analyzer.js`)
-- Multi-LLM support (DeepSeek, Chimera, Z AI)
-- User intent extraction
-- Scan result analysis
-- Intelligent report generation
-
-### 3. **Jaeger Intelligence Bridge** (`jaeger-intelligence.js`)
-- RESTful API communication to Jaeger MCP
-- Workflow orchestration (Recon, Vuln Hunting, OSINT)
-- Smart scan execution
-- Result aggregation
-
-### 4. **Jaeger MCP Server** (`jaeger-ai-core/`)
-- 150+ security tools integration
-- Multi-agent AI decision engine
-- Autonomous tool selection
-- Parameter optimization
-- Real-time execution monitoring
+- **Provider utama**: DeepSeek via OpenRouter dengan fallback otomatis.
+- **Smart Tool Filtering**: laporan hanya memuat tool yang benar-benar dieksekusi.
+- **Clean Output**: prefix "Berikut adalah..." otomatis dihapus.
+- **Format Profesional**: border, emoji indikator risiko, tree layout, dan rekomendasi prioritas.
+- **CLI Support**: dapat dipanggil dari PHP (`llm-analyzer-cli.js`) dan Worker.
 
 ---
 
-## 📋 Features
+## 📂 Struktur Direktori (ringkas)
 
-### ✨ AI-Powered Intelligence
-- **Automatic Tool Selection**: AI memilih tools terbaik berdasarkan target type
-- **Smart Parameter Optimization**: Parameter otomatis disesuaikan dengan target
-- **Intelligent Analysis**: LLM menganalisis hasil dan memberikan rekomendasi
-- **Natural Language Interface**: Gunakan perintah natural language
-
-### 🔧 Comprehensive Tool Arsenal (150+)
-- **Network Scanning**: nmap, masscan, rustscan, zmap, etc.
-- **Web Security**: nuclei, nikto, gobuster, ffuf, sqlmap, wpscan, etc.
-- **OSINT**: subfinder, amass, theharvester, shodan, spiderfoot, etc.
-- **Cloud Security**: prowler, trivy, checkov, etc.
-- **Binary Analysis**: binwalk, strings, objdump, etc.
-- **Exploitation**: metasploit, hydra, hashcat, john, etc.
-
-### 🎯 Pre-built Workflows
-- **Reconnaissance Workflow**: Subdomain enum, port scanning, tech detection
-- **Vulnerability Hunting**: Web vuln scanning, SQL injection, XSS, etc.
-- **OSINT Workflow**: Information gathering, email harvesting, social media intel
-- **Comprehensive Scan**: Full security assessment
+```
+.
+├── data/                     # Database SQLite & cache
+├── jaeger-ai-core/           # MCP server Python (150+ tools)
+├── jaeger-intelligence.js    # Bridge Node.js → MCP
+├── jaeger-telegram-bot.js    # Bot Telegram
+├── llm-analyzer*.js          # LLM analyzer + CLI wrapper
+├── web-next/                 # Next.js web interface project
+├── *.md                      # Dokumentasi rilis & panduan
+└── START_ALL.sh              # Skrip bantu menjalankan layanan
+```
 
 ---
 
-## 📦 Installation
+## 📚 Dokumentasi Pendukung
 
-### Prerequisites
-- **Node.js** >= 18.0.0
-- **Python 3** >= 3.8
-- **Security Tools**: nmap, nuclei, gobuster, subfinder, etc. (akan dideteksi otomatis)
-- **Telegram Bot Token**: Dari @BotFather
-- **OpenRouter API Key**: Untuk LLM (DeepSeek)
+| Panduan | Deskripsi |
+| --- | --- |
+| `GUIDE_MCP_SERVER.md` | Setup backend (VPS) langkah demi langkah |
+| `GUIDE_DEPLOY.md` | Panduan lengkap Cloudflare Pages & Vercel |
+| `GUIDE_LOCAL_SETUP.md` | Checklist install & pengujian end-to-end |
 
-### Setup Steps
+---
 
-> **Catatan**: Repo ini disertakan tanpa `node_modules` dan virtualenv agar arsip kecil. Jalankan langkah berikut untuk memulihkan dependensi sebelum start.
+## 🧪 Testing & Validasi
 
-1. **Clone / Extract Repository**
 ```bash
-git clone https://github.com/jaeger-ai/jaeger-ai
-cd jaeger-ai
-# jika menerima arsip bersih: unzip jaeger-ai-clean.zip && cd jaeger-ai
+# Cek kesehatan MCP (di VPS)
+curl http://127.0.0.1:8888/health
+
+# Jalankan smart scan langsung ke MCP (contoh target)
+curl -X POST http://127.0.0.1:8888/api/intelligence/smart-scan \
+  -H 'Content-Type: application/json' \
+  -d '{"target":"example.com","objective":"quick"}'
+
+# Jalankan pengujian Node (opsional)
+npm test
 ```
 
-2. **Install Dependensi Aplikasi & Tool**
-```bash
-npm install                      # dependency Node.js untuk Telegram bot
-./install_jaeger_tools.sh     # pasang CLI security tools (nmap, feroxbuster, katana, nuclei, httpx, wpscan, dll)
-
-# (opsional) buat virtualenv Jaeger jika ingin terisolasi
-python3 -m venv jaeger-ai-core/jaeger-env
-source jaeger-ai-core/jaeger-env/bin/activate
-pip install -r jaeger-ai-core/requirements.txt
-```
-Skrip `install_jaeger_tools.sh` memastikan tool CLI yang dibutuhkan Jaeger tersedia dan otomatis memperbarui template nuclei. Jalankan lagi skrip tersebut bila ada update tool di kemudian hari.
-
-3. **Konfigurasi Environment**
-```bash
-cp .env.example .env
-nano .env
-```
-
-Required environment variables:
-```env
-# Telegram Bot Token (dari @BotFather)
-BOT_TOKEN=your_telegram_bot_token_here
-
-# OpenRouter API Key (untuk LLM DeepSeek)
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-
-# Optional: Direct LLM API Keys
-DEEPSEEK_API_KEY=your_deepseek_key
-CHIMERA_API_KEY=your_chimera_key
-ZAI_API_KEY=your_zai_key
-```
-
-4. **Start Services**
-```bash
-npm start
-# atau
-./start.sh
-```
-Perintah ini akan menjalankan Jaeger MCP (Python) dan Telegram Bot sekaligus. Setelah bot online, kirim `/status` di Telegram untuk memastikan jumlah tool yang terdeteksi sesuai (biasanya >60).
-
-### Menjalankan Setelah Extract Arsip Bersih
-```bash
-unzip jaeger-ai-clean.zip
-cd jaeger-ai
-npm install
-./install_jaeger_tools.sh
-npm start
-```
-Jika ingin mode development manual, jalankan `node jaeger-telegram-bot.js` setelah Jaeger server aktif.
+Pastikan hasil scan memicu laporan LLM dan hanya mencantumkan tools yang benar-benar dipakai.
 
 ---
 
-## 🎮 Usage
+## 🛠️ Operational Tips
 
-### Interface Options
-
-JAEGER AI supports **2 interface options**:
-
-#### Option 1: Telegram Bot (Mobile-Friendly)
-```bash
-# Start services
-./start.sh
-
-# Use Telegram bot
-# Send "/start" in Telegram
-```
-
-#### Option 2: Web Interface (Desktop-Friendly) 🆕
-```bash
-# Start Jaeger MCP
-./start.sh
-
-# Start web server (development)
-cd web-interface
-php -S localhost:8080
-
-# Open browser: http://localhost:8080
-```
-
-See [WEB_INTERFACE_GUIDE.md](WEB_INTERFACE_GUIDE.md) for detailed setup.
+- Gunakan `systemd` atau `pm2` untuk menjaga `jaeger-intelligence.js` tetap berjalan.
+- Rotasi `OPENROUTER_API_KEY` secara berkala dan simpan di secret manager.
+- Monitor log: `tail -f jaeger-mcp.log`, `tail -f telegram-bot.log`, `tail -f web-next.log`.
+- Perbarui template nuclei & wordlists secara berkala (`nuclei -update-templates`).
+- Aktifkan firewall dan batasi port 8888 hanya ke alamat tepercaya bila memungkinkan.
+- Set `LLM_VERBOSE=true` hanya saat debugging; default `false` agar output ke user tetap bersih.
+- Model prioritas OpenRouter dapat diatur via `.env` (`LLM_PROVIDER_PRIORITY=openrouter,deepseek,chimera,zai` dan `LLM_OPENROUTER_MODELS=deepseek/deepseek-chat-v3.1:free,tngtech/deepseek-r1t2-chimera:free,z-ai/glm-4.5-air:free`).
+- Jika ingin analisis LLM lebih cepat, turunkan `LLM_MAX_TOKENS` (mis. 5000) atau batasi panjang input sebelum mengirim ke analyzer.
 
 ---
 
-### Telegram Bot Commands
+## 🤝 Kontribusi & Dukungan
 
-**Basic Commands:**
-- `/start` - Welcome message dan panduan
-- `/help` - Help guide lengkap
-- `/status` - Cek status Jaeger server
-- `/tools` - List available tools
-- `/cancel` - Cancel active scan
+- Temukan bug? Buka issue atau kirim PR dengan deskripsi jelas.
+- Butuh bantuan cepat? Lihat bagian troubleshooting pada masing-masing panduan atau cek log layanan.
+- Jaga kerahasiaan target saat berbagi log (redaksi data sensitif sebelum mengunggah).
 
-**Workflow Commands:**
-- `/recon <target>` - Full reconnaissance workflow
-- `/vulnhunt <target>` - Vulnerability hunting workflow
-- `/osint <target>` - OSINT workflow
-- `/tech <target>` - Technology detection
-
-**Natural Language Examples:**
-```
-"scan google.com"
-"recon ibnusaad.com"
-"vulnerability hunting telkom.co.id"
-"quick scan 192.168.1.1"
-"osint example.com"
-"sqlmap saja ke https://target.com/login.php?id=1"
-"jalankan nmap dan nikto ke contoh.com"
-```
-Jika user menyebut satu atau beberapa nama tool secara eksplisit (mis. `nmap`, `ffuf`, `sqlmap`), bot akan menjalankan tepat tool tersebut. Tanpa sebutan spesifik, Jaeger akan menjalankan workflow komprehensif (hingga 10 tool untuk mode vuln/comprehensive) dengan status update setiap 60 detik.
-
----
-
-## 🔄 Workflow Examples
-
-### 1. Reconnaissance Workflow
-```
-User: "recon example.com"
-
-Flow:
-1. Telegram Bot receives request
-2. LLM analyzes: target=example.com, objective=reconnaissance
-3. Jaeger Intelligence calls /api/bugbounty/reconnaissance-workflow
-4. Jaeger executes:
-   - subfinder (subdomain discovery)
-   - nmap (port scanning)
-   - httpx (technology detection)
-   - nuclei (vulnerability templates)
-5. Results → LLM Analysis
-6. Formatted Report → User via Telegram
-```
-
-### 2. Vulnerability Hunting
-```
-User: "find vulnerabilities in example.com"
-
-Flow:
-1. LLM identifies: objective=vulnerability_hunting
-2. Jaeger calls /api/bugbounty/vulnerability-hunting-workflow
-3. Tools executed:
-   - nuclei (template-based scanning)
-   - nikto (web server vulnerabilities)
-   - sqlmap (SQL injection)
-   - dalfox (XSS detection)
-4. LLM analyzes severity and creates prioritized report
-5. User receives actionable vulnerability report
-```
-
----
-
-## 🏗️ Project Structure
-
-```
-jaeger-ai/
-├── jaeger-ai-core/              # Jaeger MCP Server (Python)
-│   ├── jaeger_server.py        # Main MCP server
-│   ├── jaeger_mcp.py           # MCP implementation
-│   ├── jaeger-ai-mcp.json      # MCP configuration
-│   ├── requirements.txt           # Python dependencies
-│   └── jaeger-env/             # Python virtual environment
-│
-├── jaeger-telegram-bot.js         # Main Telegram Bot
-├── llm-analyzer.js                # LLM Intelligence Layer
-├── jaeger-intelligence.js      # Jaeger API Bridge
-├── package.json                   # Node.js config
-├── start.sh                       # Startup script
-├── .env                           # Environment variables
-└── README.md                      # This file
-```
-
----
-
-## 🔧 Configuration
-
-### Jaeger MCP Server
-Default: `http://127.0.0.1:8888`
-
-API Endpoints:
-- `/health` - Health check
-- `/api/intelligence/analyze-target` - Target analysis
-- `/api/intelligence/select-tools` - Tool selection
-- `/api/intelligence/smart-scan` - Smart scan execution
-- `/api/bugbounty/reconnaissance-workflow` - Recon workflow
-- `/api/bugbounty/vulnerability-hunting-workflow` - Vuln workflow
-- `/api/bugbounty/osint-workflow` - OSINT workflow
-
-### LLM Configuration
-Primary: OpenRouter (DeepSeek model)
-Fallback: Direct DeepSeek API, Chimera, Z AI
-
----
-
-## 🛡️ Security Notes
-
-⚠️ **PENTING:**
-- Tool ini HANYA untuk security testing yang LEGAL dan AUTHORIZED
-- Jangan gunakan pada target tanpa izin tertulis
-- Patuhi hukum cybersecurity di wilayah Anda
-- Gunakan dengan tanggung jawab
-
----
-
-## 🐛 Troubleshooting
-
-### Jaeger Server tidak start
-```bash
-cd jaeger-ai-core
-./jaeger-env/bin/python3 jaeger_server.py
-```
-
-### Telegram Bot tidak respond
-1. Cek BOT_TOKEN di .env
-2. Pastikan Jaeger server running: `curl http://127.0.0.1:8888/health`
-3. Cek logs
-
-### LLM tidak bekerja
-1. Cek OPENROUTER_API_KEY di .env
-2. Fallback akan menggunakan regex-based analysis
-
----
-
-## 📊 Performance
-
-- **Concurrent Scans**: Mendukung multiple users
-- **Timeout**: 10 menit per scan (configurable)
-- **Caching**: Results di-cache untuk performa
-- **Async Execution**: Non-blocking tool execution
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Please:
-1. Fork repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Create Pull Request
-
----
-
-## 📄 License
-
-MIT License - See LICENSE file
-
----
-
-## 👥 Credits
-
-- **Jaeger AI**: https://github.com/0x4m4/jaeger-ai
-- **LLM Providers**: OpenRouter, DeepSeek, Chimera, Z AI
-- **Security Tools**: Community tools (nmap, nuclei, subfinder, etc.)
-
----
-
-## 📞 Support
-
-- Issues: https://github.com/jaeger-ai/jaeger-ai/issues
-- Telegram: @jaeger_ai_support
-
----
-
-**Jaeger AI v4.0** - *Intelligent Security Testing, Simplified* 🚀
+Selamat menggunakan JAEGER AI v5.0! 🚀

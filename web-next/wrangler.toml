@@ -1,0 +1,6 @@
+name = "jaeger-ai-next"
+compatibility_date = "2024-05-01"
+pages_build_output_dir = "../.cf-pages"
+
+[vars]
+NEXT_PUBLIC_MCP_URL = "https://YOUR-VPS-IP:8888"

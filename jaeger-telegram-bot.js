@@ -42,11 +42,19 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, {
 });
 const jaeger = new JaegerIntelligence();
 const llm = new LLMAnalyzer({
-    geminiKey: process.env.GEMINI_API_KEY,
-    geminiModel: process.env.GEMINI_MODEL,
-    providerPriority: ['gemini', 'openrouter', 'deepseek', 'chimera', 'zai'],
-    maxTokens: Number(process.env.LLM_MAX_TOKENS) || 8000
+    providerPriority: ['openrouter', 'deepseek', 'chimera', 'zai'],
+    maxTokens: Number(process.env.LLM_MAX_TOKENS) || 8000,
+    enableLogging: process.env.LLM_VERBOSE === 'true'
 });
+
+(async () => {
+    try {
+        await bot.deleteWebHook({ drop_pending_updates: true });
+        console.log(`${colors.yellow}ℹ️  Ensured polling mode by removing leftover webhook (if any).${colors.reset}`);
+    } catch (error) {
+        console.error(`${colors.red}❌ Failed to delete Telegram webhook on startup: ${error.message}${colors.reset}`);
+    }
+})();
 
 // Color codes for console
 const colors = {
@@ -60,6 +68,169 @@ const colors = {
 
 function escapeMarkdown(text = '') {
     return String(text || '').replace(/([\\`*_\[\]()])/g, '\\$1');
+}
+
+function stripAnsi(text = '') {
+    return String(text || '').replace(/\u001b\[[0-9;]*m/g, '');
+}
+
+function getTelegramErrorDescription(error) {
+    if (!error) {
+        return '';
+    }
+
+    if (error.response && error.response.body && typeof error.response.body.description === 'string') {
+        return error.response.body.description;
+    }
+
+    if (typeof error.message === 'string') {
+        return error.message;
+    }
+
+    return '';
+}
+
+function isMarkdownParseError(error) {
+    const description = getTelegramErrorDescription(error);
+    return error && error.code === 'ETELEGRAM' && description.includes("can't parse entities");
+}
+
+const DEFAULT_FINDING_PATTERN = /(critical|high|medium|low|severity|vuln|cve|exploit|found|leak|exposed|shell|password|credential|brute|open|status\s*:\s*(200|30[12]|403)|unauthorized|redirect|warning|error|issue|risk|login|admin|plugin|theme|robots|wp-cron|header|user|enumerat|exposed)/i;
+
+const TOOL_HIGHLIGHTERS = {
+    WPSCAN: (lines) => {
+        const interesting = [];
+        const keywords = /(\[!\]|vuln|cve|critical|high risk|expos|leak|password|credential|brute|enumeration|shell|sql|xss|csrf|rce|lfi|rfi|auth|privilege|interesting finding|robots|wp-cron|plugin|theme|user|readme|headers)/i;
+
+        for (const line of lines) {
+            if (/^Scan Aborted/i.test(line)) {
+                interesting.push(line);
+                continue;
+            }
+
+            if (line.toLowerCase().includes('sponsored by') || line.startsWith('WordPress Security Scanner')) {
+                continue;
+            }
+
+            if (/^Version\b/i.test(line) || /^_+$/.test(line)) {
+                continue;
+            }
+
+            if (/^\[\?/i.test(line) || /^\[i\]/i.test(line)) {
+                continue;
+            }
+
+            if (/^\[\+]/.test(line)) {
+                if (!/\b(Started|Finished|Requests|Cached Requests|Data Sent|Data Received|Memory used|Elapsed time)\b/i.test(line)) {
+                    interesting.push(line);
+                    continue;
+                }
+            }
+
+            if (keywords.test(line) || /^\[!]/.test(line)) {
+                interesting.push(line);
+            }
+        }
+
+        return interesting;
+    },
+    NMAP: (lines) => {
+        const interesting = [];
+        const portFindings = [];
+
+        for (const line of lines) {
+            if (/^PORT\s+/i.test(line) || /^Service\s+/i.test(line)) {
+                interesting.push(line);
+                continue;
+            }
+
+            if (/Nmap scan report/i.test(line) || /Not shown:/i.test(line) || /Nmap done:/i.test(line)) {
+                interesting.push(line);
+                continue;
+            }
+
+            if (/\bopen\b/i.test(line)) {
+                if (!/tcpwrapped|unknown/i.test(line)) {
+                    portFindings.push(line);
+                }
+            }
+        }
+
+        if (portFindings.length) {
+            interesting.push(...portFindings);
+        } else {
+            const genericPorts = lines.filter((line) => /\bopen\b/i.test(line)).slice(0, 6);
+            if (genericPorts.length) {
+                interesting.push(...genericPorts);
+                interesting.push('ℹ️ Banyak port terdeteksi sebagai "tcpwrapped" (firewall/IDS menutup koneksi).');
+            }
+        }
+
+        return interesting;
+    },
+    NUCLEI: (lines) => lines.filter((line) => /\[(critical|high|medium|low)\]/i.test(line)),
+    NIKTO: (lines) => lines.filter((line) => /^\+/.test(line)),
+    SQLMAP: (lines) => lines.filter((line) => /(vulnerable|payload|parameter|back-end dbms|sql injection|shell|technique)/i.test(line)),
+    GOBUSTER: (lines) => lines.filter((line) => /Status:\s*(200|204|301|302|307|401|403)/i.test(line)),
+    FFUF: (lines) => lines.filter((line) => /Status:\s*(200|204|301|302|307|401|403)/i.test(line)),
+    HTTPX: (lines) => lines.filter((line) => /\[(200|30[12]|403|401|500)\]/.test(line) || /(title|technology)/i.test(line)),
+    SUBFINDER: (lines) => lines.filter((line) => /https?:\/\//i.test(line)),
+    AMASS: (lines) => lines.filter((line) => /https?:\/\//i.test(line)),
+    DALFOX: (lines) => lines.filter((line) => /(reflected|stored|xss|vuln|found)/i.test(line)),
+    DIRSEARCH: (lines) => lines.filter((line) => /\b\d{3}\b/.test(line) && /(FOUND|Status)/i.test(line))
+};
+
+function sanitizeToolOutput(toolName = '', output = '') {
+    const upperName = String(toolName || '').toUpperCase();
+    const cleaned = stripAnsi(output || '');
+
+    if (!cleaned) {
+        return '';
+    }
+
+    const lines = cleaned
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    const highlighter = TOOL_HIGHLIGHTERS[upperName];
+    let interesting = highlighter ? highlighter(lines) : null;
+
+    if (!interesting || interesting.length === 0) {
+        interesting = lines.filter((line) => DEFAULT_FINDING_PATTERN.test(line));
+    }
+
+    if (!interesting.length) {
+        return lines.slice(0, 8).join('\n');
+    }
+
+    return interesting.slice(0, 12).join('\n');
+}
+
+async function sendMarkdownSafe(chatId, text, options = {}) {
+    const opts = { parse_mode: 'Markdown', ...options };
+
+    try {
+        return await bot.sendMessage(chatId, text, opts);
+    } catch (error) {
+        if (!isMarkdownParseError(error)) {
+            throw error;
+        }
+
+        const sanitized = escapeMarkdown(text);
+
+        if (sanitized !== text) {
+            try {
+                return await bot.sendMessage(chatId, sanitized, opts);
+            } catch (innerError) {
+                if (!isMarkdownParseError(innerError)) {
+                    throw innerError;
+                }
+            }
+        }
+
+        return await bot.sendMessage(chatId, text, { ...options, parse_mode: undefined });
+    }
 }
 
 function normalizeObjective(objective = '', analysisType = '') {
@@ -223,12 +394,27 @@ function formatExecutionSummary({ result, target, objective }) {
         ? selectedTools
         : successfulTools.map((tool) => tool.tool).filter(Boolean);
 
+    const unsupportedTools = Array.isArray(result.unsupported_tools) ? result.unsupported_tools : [];
+    const recommendedAlternatives = Array.isArray(result.recommended_alternatives)
+        ? result.recommended_alternatives
+        : [];
+
     if (toolNames.length) {
         const displayNames = toolNames
             .slice(0, 8)
             .map((name) => escapeMarkdown(name.toUpperCase()));
         const suffix = toolNames.length > 8 ? ' +' + (toolNames.length - 8) + ' more' : '';
         lines.push(`🔧 *Tools Used*: ${displayNames.join(', ')}${suffix}`);
+        lines.push('');
+    }
+
+    if (unsupportedTools.length) {
+        const skipped = unsupportedTools.map((tool) => escapeMarkdown(tool.toUpperCase())).join(', ');
+        lines.push(`⚠️ *Skipped*: ${skipped} (belum tersedia di Jaeger MCP)`);
+        if (recommendedAlternatives.length) {
+            const replacements = recommendedAlternatives.map((tool) => escapeMarkdown(tool.toUpperCase())).join(', ');
+            lines.push(`✅ *Pengganti Otomatis*: ${replacements}`);
+        }
         lines.push('');
     }
 
@@ -286,8 +472,10 @@ function formatToolOutput(tool) {
     const status = tool?.success === false || tool?.status === 'failed' ? '❌ FAILED' : '✅ SUCCESS';
     const executionTime = tool?.execution_time ? `${Math.round(tool.execution_time)}s` : 'N/A';
     const command = tool?.command ? tool.command : null;
-    const stdout = extractHighlights(tool?.stdout);
-    const stderr = extractHighlights(tool?.stderr, { maxLines: 4, fallbackLines: 0 });
+    const sanitizedStdout = sanitizeToolOutput(name, tool?.stdout);
+    const sanitizedStderr = stripAnsi(tool?.stderr || '');
+    const stdout = extractHighlights(sanitizedStdout);
+    const stderr = extractHighlights(sanitizedStderr, { maxLines: 4, fallbackLines: 0 });
     const error = trimOutput(tool?.error, 400);
     const vulnsFound = tool?.vulnerabilities_found || 0;
 
@@ -333,20 +521,38 @@ function formatToolOutput(tool) {
         lines[lines.length - 1] = lines[lines.length - 1].replace('├─', '└─');
     }
 
-    if (stdout) {
+    let outputSection = stdout;
+    if (!outputSection && sanitizedStdout) {
+        outputSection = sanitizedStdout.split(/\r?\n/).slice(0, 8).join('\n');
+    }
+
+    let hasOutputBlock = false;
+    if (outputSection) {
         lines.push('');
         lines.push('📄 *Output Highlights:*');
         lines.push('```');
-        lines.push(stdout);
+        lines.push(outputSection);
         lines.push('```');
+        hasOutputBlock = true;
     }
 
-    if (stderr) {
+    let errorSection = stderr;
+    if (!errorSection && sanitizedStderr) {
+        errorSection = sanitizedStderr.split(/\r?\n/).slice(0, 6).join('\n');
+    }
+
+    if (errorSection) {
         lines.push('');
         lines.push('⚠️ *Stderr:*');
         lines.push('```');
-        lines.push(stderr);
+        lines.push(errorSection);
         lines.push('```');
+        hasOutputBlock = true;
+    }
+
+    if (!hasOutputBlock && status === '✅ SUCCESS' && vulnsFound === 0) {
+        lines.push('');
+        lines.push('✅ Tidak ada temuan signifikan yang dilaporkan oleh tool ini.');
     }
 
     if (error && error !== stderr) {
@@ -433,10 +639,10 @@ async function deliverScanOutcome({ chatId, target, objective, result, originalT
     }
 
     const summary = formatExecutionSummary({ result, target, objective });
-    await bot.sendMessage(chatId, summary, { parse_mode: 'Markdown' });
+    await sendMarkdownSafe(chatId, summary);
 
     // Add detailed tool execution report header
-    await bot.sendMessage(chatId, '## 🔧 *Detailed Tool Execution Report*', { parse_mode: 'Markdown' });
+    await sendMarkdownSafe(chatId, '## 🔧 *Detailed Tool Execution Report*');
 
     await sendToolOutputs(chatId, result.tools_executed);
 
@@ -458,11 +664,11 @@ async function deliverScanOutcome({ chatId, target, objective, result, originalT
         '🤖 Powered by Advanced AI Security Intelligence'
     ].join('\n');
 
-    await bot.sendMessage(chatId, finalSummary, { parse_mode: 'Markdown' });
+    await sendMarkdownSafe(chatId, finalSummary);
 
     if (originalText && (originalText.toLowerCase().includes('detail') || originalText.toLowerCase().includes('raw'))) {
         const rawData = `\`\`\`json\n${JSON.stringify(result, null, 2).substring(0, 3000)}\n\`\`\``;
-        await bot.sendMessage(chatId, rawData, { parse_mode: 'Markdown' });
+        await sendMarkdownSafe(chatId, rawData);
     }
 
     await bot.sendMessage(chatId, '🧠 Analyzing results with AI...');
@@ -475,10 +681,10 @@ async function deliverScanOutcome({ chatId, target, objective, result, originalT
         if (report.length > 4000) {
             const parts = splitMessage(report, 4000);
             for (const part of parts) {
-                await bot.sendMessage(chatId, part, { parse_mode: 'Markdown' });
+                await sendMarkdownSafe(chatId, part);
             }
         } else {
-            await bot.sendMessage(chatId, report, { parse_mode: 'Markdown' });
+            await sendMarkdownSafe(chatId, report);
         }
     } catch (analysisError) {
         console.error(`${colors.red}❌ LLM report generation error: ${analysisError.message}${colors.reset}`);
@@ -1070,6 +1276,28 @@ bot.on('polling_error', (error) => {
 
     pollingErrorCount++;
     lastErrorTime = now;
+
+    const description = getTelegramErrorDescription(error);
+
+    if (error.code === 'ETELEGRAM' && description.includes('terminated by other getUpdates request')) {
+        console.log(`${colors.red}❌ Detected concurrent polling (409). Clearing webhook and restarting...${colors.reset}`);
+        bot.stopPolling({ cancel: true }).then(async () => {
+            try {
+                await bot.deleteWebHook({ drop_pending_updates: true });
+            } catch (hookError) {
+                console.error(`${colors.red}❌ Failed to delete webhook: ${hookError.message}${colors.reset}`);
+            }
+
+            setTimeout(() => {
+                console.log(`${colors.cyan}🔄 Restarting polling after 409 recovery...${colors.reset}`);
+                pollingErrorCount = 0;
+                bot.startPolling();
+            }, 5000);
+        }).catch((stopError) => {
+            console.error(`${colors.red}❌ Unable to stop polling: ${stopError.message}${colors.reset}`);
+        });
+        return;
+    }
 
     // Common network errors - graceful handling (less verbose logging)
     if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'EFATAL' ||

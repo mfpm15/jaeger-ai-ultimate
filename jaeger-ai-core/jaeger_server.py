@@ -31,6 +31,7 @@ import hashlib
 import pickle
 import base64
 import queue
+import shlex
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
@@ -1068,21 +1069,26 @@ class IntelligentDecisionEngine:
         self._use_advanced_optimizer = False
 
     def _optimize_nmap_params(self, profile: TargetProfile, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Optimize Nmap parameters"""
+        """Optimize Nmap parameters - STEALTH & FAST mode by default"""
         params = {"target": profile.target}
 
+        # STEALTH MODE: SYN scan only, no version detection (faster & stealthier)
         if profile.target_type == TargetType.WEB_APPLICATION:
-            params["scan_type"] = "-sV -sC"
-            params["ports"] = "80,443,8080,8443,8000,9000"
+            params["scan_type"] = "-sS"  # SYN stealth scan (no -sV to avoid detection)
+            params["ports"] = "80,443,8080,8443,3000,5000,8000,9000"  # Common web ports
+            params["additional_args"] = "-Pn --open"  # Skip ping, show only open ports
         elif profile.target_type == TargetType.NETWORK_HOST:
-            params["scan_type"] = "-sS -O"
-            params["additional_args"] = "--top-ports 1000"
+            params["scan_type"] = "-sS"
+            params["additional_args"] = "--top-ports 100 -Pn --open"  # Faster: top 100 instead of 1000
 
-        # Adjust timing based on stealth requirements
-        if context.get("stealth", False):
-            params["additional_args"] = params.get("additional_args", "") + " -T2"
-        else:
+        # DEFAULT STEALTH TIMING: T2 (polite) to avoid WAF/IDS detection
+        # Only use aggressive if explicitly requested
+        if context.get("aggressive", False):
             params["additional_args"] = params.get("additional_args", "") + " -T4"
+        elif context.get("quick", False) or context.get("prefer_faster_tools", False):
+            params["additional_args"] = params.get("additional_args", "") + " -T3"  # Balanced
+        else:
+            params["additional_args"] = params.get("additional_args", "") + " -T2 -f"  # Stealth + fragment
 
         return params
 
@@ -1232,29 +1238,31 @@ class IntelligentDecisionEngine:
         return params
 
     def _optimize_nmap_advanced_params(self, profile: TargetProfile, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Optimize advanced Nmap parameters"""
+        """Optimize advanced Nmap parameters - STEALTH & FAST by default"""
         params = {"target": profile.target}
 
-        # Select scan type based on context
-        if context.get("stealth", False):
+        # DEFAULT TO STEALTH MODE (T2) - only aggressive if explicitly requested
+        if context.get("aggressive", False):
+            params["scan_type"] = "-sS -sV"  # Add version detection for aggressive
+            params["timing"] = "T4"
+            params["aggressive"] = True
+        elif context.get("quick", False) or context.get("prefer_faster_tools", False):
+            params["scan_type"] = "-sS"
+            params["timing"] = "T3"  # Balanced: faster than T2 but safer than T4
+            params["additional_args"] = "-Pn --open"
+        else:
+            # STEALTH BY DEFAULT: SYN scan, polite timing, fragment packets
             params["scan_type"] = "-sS"
             params["timing"] = "T2"
             params["stealth"] = True
-        elif context.get("aggressive", False):
-            params["scan_type"] = "-sS"
-            params["timing"] = "T4"
-            params["aggressive"] = True
-        else:
-            params["scan_type"] = "-sS"
-            params["timing"] = "T4"
-            params["os_detection"] = True
-            params["version_detection"] = True
+            params["additional_args"] = "-Pn -f --open"  # Skip ping, fragment, open only
 
-        # Add NSE scripts based on target type
-        if profile.target_type == TargetType.WEB_APPLICATION:
-            params["nse_scripts"] = "http-*,ssl-*"
-        elif profile.target_type == TargetType.NETWORK_HOST:
-            params["nse_scripts"] = "default,discovery,safe"
+        # NSE scripts only for comprehensive scans (not for stealth/quick)
+        if context.get("comprehensive", False) and not context.get("quick", False):
+            if profile.target_type == TargetType.WEB_APPLICATION:
+                params["nse_scripts"] = "http-title,http-headers,ssl-cert"  # Light scripts only
+            elif profile.target_type == TargetType.NETWORK_HOST:
+                params["nse_scripts"] = "default"
 
         return params
 
@@ -9681,12 +9689,6 @@ def intelligent_smart_scan():
         objective = data.get('objective', 'quick')
         max_tools = data.get('max_tools', 5)
         requested_tools = data.get('specific_tools') or data.get('selected_tools') or []
-        allowed_tool_names = {
-            'nmap', 'gobuster', 'nuclei', 'nikto', 'sqlmap', 'ffuf', 'feroxbuster',
-            'katana', 'httpx', 'wpscan', 'dirsearch', 'arjun', 'paramspider',
-            'dalfox', 'amass', 'subfinder'
-        }
-
         logger.info(f"🚀 Starting intelligent smart scan for {target}")
 
         # Analyze target
@@ -9694,14 +9696,74 @@ def intelligent_smart_scan():
 
         # Select tools (honour user overrides if provided)
         if requested_tools:
-            selected_tools = [tool for tool in requested_tools if tool in allowed_tool_names][:max_tools]
+            selected_tools = []
+            for tool in requested_tools:
+                tool_name = str(tool).strip().lower()
+                if not tool_name:
+                    continue
+                if tool_name not in selected_tools:
+                    selected_tools.append(tool_name)
+            if max_tools:
+                selected_tools = selected_tools[:max_tools]
             logger.info(f"🎯 Requested tools detected: {selected_tools}")
         else:
             selected_tools = decision_engine.select_optimal_tools(profile, objective)[:max_tools]
+            selected_tools = [str(tool).strip().lower() for tool in selected_tools if str(tool).strip()]
+
+        supported_tool_names = {
+            'nmap', 'gobuster', 'nuclei', 'nikto', 'sqlmap', 'ffuf', 'feroxbuster',
+            'katana', 'httpx', 'wpscan', 'dirsearch', 'arjun', 'paramspider', 'dalfox',
+            'amass', 'subfinder'
+        }
+        alternative_tool_map = {
+            'zmap': 'nmap',
+            'masscan': 'nmap',
+            'rustscan': 'nmap',
+            'whatweb': 'httpx',
+            'censys': 'httpx',
+            'naabu': 'nmap',
+            'gau': 'httpx'
+        }
+
+        unsupported_tools = []
+        executable_tools = []
+        for tool in selected_tools:
+            if tool in supported_tool_names:
+                executable_tools.append(tool)
+            else:
+                unsupported_tools.append(tool)
+
+        recommended_alternatives = []
+        for tool in unsupported_tools:
+            recommended = alternative_tool_map.get(tool)
+            if recommended and recommended in supported_tool_names and recommended not in executable_tools and recommended not in recommended_alternatives:
+                recommended_alternatives.append(recommended)
+
+        if recommended_alternatives:
+            logger.info(
+                "🧭 Replacing unsupported tools %s with recommended alternatives %s",
+                unsupported_tools,
+                recommended_alternatives
+            )
+        elif unsupported_tools:
+            logger.warning("⚠️ Unsupported tools requested by user: %s", unsupported_tools)
+
+        selected_tools = executable_tools + [tool for tool in recommended_alternatives if tool not in executable_tools]
+
+        if max_tools:
+            selected_tools = selected_tools[:max_tools]
 
         if not selected_tools:
-            logger.warning("⚠️ No tools selected after filtering. Falling back to default selection.")
-            selected_tools = decision_engine.select_optimal_tools(profile, objective)[:max_tools]
+            logger.warning("⚠️ No executable tools remain after filtering. Falling back to default selection.")
+            selected_tools = [
+                str(tool).strip().lower()
+                for tool in decision_engine.select_optimal_tools(profile, objective)
+            ]
+            selected_tools = [tool for tool in selected_tools if tool in supported_tool_names]
+            if max_tools:
+                selected_tools = selected_tools[:max_tools]
+            unsupported_tools = []
+            recommended_alternatives = []
 
         # Execute tools in parallel with real tool execution
         scan_results = {
@@ -9710,7 +9772,10 @@ def intelligent_smart_scan():
             "tools_executed": [],
             "total_vulnerabilities": 0,
             "execution_summary": {},
-            "combined_output": ""
+            "combined_output": "",
+            "unsupported_tools": unsupported_tools,
+            "recommended_alternatives": recommended_alternatives,
+            "available_tools": sorted(supported_tool_names)
         }
 
         def execute_single_tool(tool_name, target, profile):
@@ -9970,13 +10035,38 @@ def execute_httpx_scan(target, params):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+def _normalize_url(target: str) -> str:
+    """Ensure targets include a scheme so CLI tools behave consistently"""
+    normalized = (target or '').strip()
+    if not normalized:
+        return normalized
+
+    if not normalized.startswith(('http://', 'https://')):
+        normalized = f"https://{normalized}"
+
+    return normalized
+
+
 def execute_wpscan_scan(target, params):
     """Execute wpscan scan with optimized parameters"""
     try:
-        additional_args = params.get('additional_args', '--enumerate p,t,u')
-        cmd_parts = ['wpscan', '--url', target]
-        if additional_args:
-            cmd_parts.extend(additional_args.split())
+        target_url = _normalize_url(target)
+
+        additional_args = params.get('additional_args', '--enumerate p,t,u') or ''
+        additional_args_tokens = shlex.split(additional_args) if additional_args else []
+
+        if not target_url:
+            return {"success": False, "error": "Invalid target URL provided for wpscan"}
+
+        cmd_parts = ['wpscan', '--no-update']
+
+        if '--ignore-main-redirect' not in additional_args_tokens:
+            cmd_parts.append('--ignore-main-redirect')
+
+        cmd_parts.extend(['--url', target_url])
+
+        if additional_args_tokens:
+            cmd_parts.extend(additional_args_tokens)
 
         return execute_command(' '.join(cmd_parts))
     except Exception as e:

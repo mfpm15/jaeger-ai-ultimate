@@ -1,13 +1,15 @@
 {
   "name": "jaeger-ai",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "description": "AI-Powered Penetration Testing Platform - Telegram Bot + Jaeger MCP (150+ Security Tools) + LLM Intelligence",
   "main": "jaeger-telegram-bot.js",
   "scripts": {
-    "start": "./start.sh",
+    "start": "./START_ALL.sh",
     "bot": "node jaeger-telegram-bot.js",
-    "test": "echo 'No tests configured'",
-    "setup": "cd jaeger-ai-new && python3 -m venv jaeger-env && ./jaeger-env/bin/pip3 install -r requirements.txt && cd .. && npm install"
+    "web:dev": "npm run dev --prefix web-next",
+    "web:build": "npm run build --prefix web-next",
+    "web:start": "npm run start --prefix web-next",
+    "test": "echo 'No tests configured'"
   },
   "keywords": [
     "cybersecurity",
