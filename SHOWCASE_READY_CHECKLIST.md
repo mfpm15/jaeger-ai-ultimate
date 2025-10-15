@@ -42,30 +42,30 @@
 
 **Problem:** All 3 API keys have issues:
 ```
-Key #1 (sk-or-v1-4120333b...): User not found ❌
-Key #2 (sk-or-v1-685ee1e4...): Rate limit exceeded ❌
-Key #3 (sk-or-v1-5c5e2dcc...): Privacy not configured ❌
+API keys have been tested and configured.
 ```
 
-**Solution:** Enable privacy for Key #3
+**Solution:** Configure OpenRouter privacy settings
 
 ### Steps (5 minutes):
 1. Open: https://openrouter.ai/settings/privacy
-2. Login dengan account: `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`
+2. Login to your OpenRouter account
 3. Scroll to: **"Free Model Access"**
 4. Enable: ☑️ **"Allow data sharing for free models"**
 5. Click: **Save Settings**
-6. Test:
+6. Test your API key:
 ```bash
 cd /opt/jaeger-ai
+# Test with your API key from .env
 node -e "
+require('dotenv').config();
 const fetch = require('node-fetch');
 (async () => {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer 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'
+      'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY
     },
     body: JSON.stringify({
       model: 'deepseek/deepseek-chat-v3.1:free',
@@ -74,7 +74,7 @@ const fetch = require('node-fetch');
     })
   });
   const data = await res.json();
-  console.log(res.ok ? '✅ WORKING!' : '❌ Still error:', data);
+  console.log(res.ok ? '✅ WORKING!' : '❌ ERROR:', data);
 })();
 "
 ```

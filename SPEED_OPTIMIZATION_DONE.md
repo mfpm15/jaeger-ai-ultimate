@@ -24,15 +24,15 @@
 ### Configuration in `.env`:
 
 ```bash
-# Primary Key (chimera model) - 2.84s
-OPENROUTER_API_KEY=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
-OPENROUTER_API_KEY_PRIMARY=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
+# Primary Key (chimera model) - Fast response
+OPENROUTER_API_KEY=<your-primary-key>
+OPENROUTER_API_KEY_PRIMARY=<your-primary-key>
 
-# Secondary Key - 2.68s ⚡⚡
-OPENROUTER_API_KEY_SECONDARY=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
+# Secondary Key - Backup
+OPENROUTER_API_KEY_SECONDARY=<your-secondary-key>
 
-# Tertiary Key - 2.62s ⚡⚡⚡ (fastest!)
-OPENROUTER_API_KEY_TERTIARY=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
+# Tertiary Key - Backup 2
+OPENROUTER_API_KEY_TERTIARY=<your-tertiary-key>
 
 # Models (priority order)
 LLM_OPENROUTER_MODELS=tngtech/deepseek-r1t2-chimera:free,z-ai/glm-4.5-air:free,deepseek/deepseek-chat-v3.1:free
